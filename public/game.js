@@ -424,7 +424,7 @@ function enterOnlineRace(gridIds) {
   beginCount();
 }
 let goAt = 0;
-function goRace() { state = 'race'; raceT = 0; goAt = performance.now(); cars.forEach(c => c.lapStart = 0); sfx('go'); }
+function goRace() { state = 'race'; raceT = 0; goAt = performance.now(); cars.forEach(c => c.lapStart = 0); sfx('go'); if (tilt.on) tiltCal(); }
 function onCross(c) {
   if (c.finished) return;
   if (c.lap >= 1) {
@@ -628,20 +628,22 @@ function hud() {
   const rec = mode === 'online' ? (board.laps[0] && board.laps[0].time) : me.bestStored;
   txt('REKOR ' + (rec ? fmt(rec) : '--:--.-'), W - 6, 28, '#c3ccd4', 8, 'right');
   if (me.bestLap) txt('SENİN ' + fmt(me.bestLap), W - 6, 38, '#9ecbef', 8, 'right');
-  txt('TURBO', 6, H - 27, '#9ecbef');
-  txt('H2', 6, H - 15, '#3fd0f0'); ctx.fillStyle = '#000'; ctx.fillRect(28, H - 16, 72, 10); ctx.fillStyle = '#20313f'; ctx.fillRect(29, H - 15, 70, 8);
-  ctx.fillStyle = me.turboOn ? (Math.floor(gT * 10) % 2 ? '#ffd84a' : '#ff7a1a') : '#3fd0f0'; ctx.fillRect(29, H - 15, Math.round(me.turbo * 0.7), 8);
-  const mx = W - MM - 4, my = H - MM - 4; ctx.drawImage(minimap, mx, my);
+  const mob = coarse;   // telefonda alt köşeler dokunmatik tuşlara ayrılır
+  const tbx = mob ? W / 2 - 50 : 6, tby = mob ? 30 : H - 27;
+  if (!mob) txt('TURBO', tbx, tby, '#9ecbef');
+  txt('H2', tbx, tby + 12 - (mob ? 1 : 0), '#3fd0f0'); ctx.fillStyle = '#000'; ctx.fillRect(tbx + 22, tby + 11, 72, 10); ctx.fillStyle = '#20313f'; ctx.fillRect(tbx + 23, tby + 12, 70, 8);
+  ctx.fillStyle = me.turboOn ? (Math.floor(gT * 10) % 2 ? '#ffd84a' : '#ff7a1a') : '#3fd0f0'; ctx.fillRect(tbx + 23, tby + 12, Math.round(me.turbo * 0.7), 8);
+  const mx = W - MM - 4, my = mob ? 48 : H - MM - 4; ctx.drawImage(minimap, mx, my);
   for (const c of cars) { const x = mx + (c.x - mmScale.x0) * mmScale.s, y = my + (c.y - mmScale.y0) * mmScale.s, s = c === me ? 3 : 2;
     ctx.fillStyle = '#000'; ctx.fillRect(Math.round(x) - s + 1 - 1, Math.round(y) - s + 1 - 1, s + 2, s + 2); ctx.fillStyle = c.def.col; ctx.fillRect(Math.round(x) - s + 1, Math.round(y) - s + 1, s, s); }
   st.forEach((c, i) => { const y = 50 + i * 10; ctx.fillStyle = c.def.col; ctx.fillRect(6, y + 1, 4, 6);
     const nm = (c.kind === 'ai' ? c.def.name : c.name).toLocaleUpperCase('tr').slice(0, 10);
     txt((i + 1) + ' ' + nm, 13, y, c === me ? '#ffd84a' : c.finished ? '#5fd16b' : '#e6eef5', 8); });
-  feed.forEach((f, i) => { ctx.globalAlpha = Math.min(1, f.life); txt(f.t, W - 6, 52 + i * 10, f.col, 8, 'right'); ctx.globalAlpha = 1; });
+  feed.forEach((f, i) => { ctx.globalAlpha = Math.min(1, f.life); if (mob) txt(f.t, W / 2, 84 + i * 10, f.col, 8, 'center'); else txt(f.t, W - 6, 52 + i * 10, f.col, 8, 'right'); ctx.globalAlpha = 1; });
   const dot = Math.cos(me.a) * TX[me.idx] + Math.sin(me.a) * TY[me.idx];
   if (state === 'race' && dot < -0.35 && Math.abs(speedF(me)) > 15 && Math.floor(gT * 3) % 2) txt('TERS YÖN!', W / 2, 60, '#ff6a5e', 16, 'center');
   if (msgT > 0) txt(msg, W / 2, 40, msgCol, 8, 'center');
-  if (graceEnd && state === 'race') { const left = Math.max(0, Math.ceil((graceEnd - performance.now()) / 1000)); txt('BİTİŞE ' + left + ' SN', W / 2, 28, '#ff6a5e', 8, 'center'); }
+  if (graceEnd && state === 'race') { const left = Math.max(0, Math.ceil((graceEnd - performance.now()) / 1000)); txt('BİTİŞE ' + left + ' SN', W / 2, mob ? 54 : 28, '#ff6a5e', 8, 'center'); }
   if (state === 'count' || (state === 'race' && raceT < 1)) lights();
   if (state === 'paused') { panel(92, 80, 200, 50); txt('DURAKLATILDI', W / 2, 92, '#ffffff', 8, 'center'); txt('Esc: devam', W / 2, 110, '#9ecbef', 8, 'center'); }
   if (state === 'finish') { txt('FİNİŞ!', W / 2, 70, '#ffd84a', 16, 'center'); if (mode === 'online') txt('Diğerleri bekleniyor…', W / 2, 92, '#c3ccd4', 8, 'center'); }
@@ -669,7 +671,7 @@ function drawResults() {
 }
 function drawAttractHUD() {
   logoBadge(ctx, 4, 4);
-  if (spec.size) { ctx.fillStyle = '#d22f2a'; ctx.fillRect(W - 66, 6, 60, 12); txt('CANLI', W - 36, 8, '#ffffff', 8, 'center', false); }
+  if (spec.size) { ctx.fillStyle = '#d22f2a'; ctx.fillRect(4, 22, 60, 12); txt('CANLI', 34, 24, '#ffffff', 8, 'center', false); }
 }
 function render() {
   if (state === 'boot') { ctx.fillStyle = '#0a1f33'; ctx.fillRect(0, 0, W, H); txt('YÜKLENİYOR…', W / 2, H / 2 - 4, '#e6eef5', 8, 'center'); return; }
@@ -879,6 +881,7 @@ function togglePause() {
   if (state === 'race' || state === 'count' || state === 'finish') { prevState = state; state = 'paused'; } else if (state === 'paused') state = prevState;
 }
 addEventListener('keydown', e => {
+  if (drawerOpen()) { if (e.key === 'Escape') closeDrawers(); return; }
   const tag = (e.target.tagName || '').toLowerCase();
   if (tag === 'input' || tag === 'select' || tag === 'textarea') return;
   const k = e.key.toLowerCase();
@@ -908,7 +911,8 @@ const clamp1 = v => clamp(v, -1, 1);
 function readInput() {
   const kS = (keys.arrowright || keys.d ? 1 : 0) - (keys.arrowleft || keys.a ? 1 : 0);
   const kT = (keys.arrowup || keys.w ? 1 : 0) - (keys.arrowdown || keys.s ? 1 : 0);
-  lastInput = { steer: clamp1(kS + (joy.ok ? joy.x : 0)), thr: clamp1(kT + (joy.ok ? joy.y : 0)), turbo: !!(keys[' '] || keys.shift || (joy.ok && joy.b)) };
+  const tS = (coarse && ctlMode === 'tilt' && tilt.on) ? tilt.steer : 0;
+  lastInput = { steer: clamp1(kS + tS + (joy.ok ? joy.x : 0)), thr: clamp1(kT + (joy.ok ? joy.y : 0)), turbo: !!(keys[' '] || keys.shift || (joy.ok && joy.b)) };
   return lastInput;
 }
 let navLatch = false;
@@ -1012,9 +1016,95 @@ function updateEngine() {
   eng.frequency.setTargetAtTime(46 + r * 120 + (c && c.turboOn ? 30 : 0), ac.currentTime, 0.05);
   eng2.frequency.setTargetAtTime(92 + r * 240, ac.currentTime, 0.05);
 }
-$('muteBtn').textContent = muted ? 'SES: KAPALI' : 'SES: AÇIK';
-$('muteBtn').onclick = () => { initAudio(); muted = !muted; store.set('hgp-mute', muted); $('muteBtn').textContent = muted ? 'SES: KAPALI' : 'SES: AÇIK'; if (muted && engGain) engGain.gain.value = 0; };
-$('fsBtn').onclick = () => { const el = $('screen'); try { const r = el.requestFullscreen && el.requestFullscreen(); if (r && r.catch) r.catch(() => {}); } catch (e) { } };
+const muteSync = () => { $('muteBtn').setAttribute('aria-pressed', String(muted)); $('muteBtn').title = muted ? 'Ses kapalı' : 'Ses açık'; $('muteBtn').style.opacity = muted ? .5 : 1; };
+muteSync();
+$('muteBtn').onclick = () => { initAudio(); muted = !muted; store.set('hgp-mute', muted); muteSync(); if (muted && engGain) engGain.gain.value = 0; };
+
+/* =========================================================
+   TAM EKRAN, YATAY KİLİT, ÇEKMECELER, TELEFON KONTROLLERİ
+   ========================================================= */
+const docEl = document.documentElement;
+const fsEl = () => document.fullscreenElement || document.webkitFullscreenElement;
+const canFS = !!(docEl.requestFullscreen || docEl.webkitRequestFullscreen);
+let fsUserExited = false, fsWanted = false;
+function enterFS() {
+  if (!canFS || fsEl()) return;
+  fsWanted = true;
+  try {
+    const r = docEl.requestFullscreen ? docEl.requestFullscreen({ navigationUI: 'hide' }) : docEl.webkitRequestFullscreen();
+    if (r && r.then) r.then(lockLandscape).catch(() => {}); else lockLandscape();
+  } catch (e) { }
+}
+function exitFS() { try { (document.exitFullscreen || document.webkitExitFullscreen).call(document); } catch (e) { } }
+function lockLandscape() { try { if (coarse && screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {}); } catch (e) { } }
+const onFsChange = () => { if (!fsEl() && fsWanted) fsUserExited = true; $('fsBtn').setAttribute('aria-pressed', String(!!fsEl())); };
+document.addEventListener('fullscreenchange', onFsChange); document.addEventListener('webkitfullscreenchange', onFsChange);
+$('fsBtn').onclick = () => { if (fsEl()) { exitFS(); } else { fsUserExited = false; enterFS(); } };
+if (!canFS) $('fsBtn').hidden = true;
+// ilk dokunuşta/tıkta otomatik tam ekran (tarayıcılar kullanıcı hareketi olmadan izin vermez)
+function firstGesture(e) {
+  if (e && e.target && e.target.closest && e.target.closest('#fsBtn')) return;
+  if (!fsUserExited) enterFS();
+  if (ctlMode === 'tilt' && !tilt.on) enableTilt().then(ok => { if (!ok) setCtl('buttons'); });
+}
+addEventListener('pointerdown', firstGesture, true);
+addEventListener('keydown', e => { if (e.key !== 'Escape' && e.key !== 'F11') firstGesture(e); }, true);
+
+// çekmeceler
+const drawers = { board: $('drawerBoard'), set: $('drawerSet') };
+const openDrawer = k => { for (const d of Object.values(drawers)) d.hidden = true; drawers[k].hidden = false; const b = drawers[k].querySelector('[data-close]'); if (b) b.focus(); };
+const closeDrawers = () => { for (const d of Object.values(drawers)) d.hidden = true; };
+const drawerOpen = () => Object.values(drawers).some(d => !d.hidden);
+$('boardBtn').onclick = () => openDrawer('board');
+$('setBtn').onclick = () => openDrawer('set');
+for (const d of Object.values(drawers)) {
+  d.addEventListener('click', e => { if (e.target === d || e.target.closest('[data-close]')) closeDrawers(); });
+}
+
+// telefon: tuşlar ya da eğerek sürüş
+let ctlMode = store.get('hgp-ctl', 'buttons');
+const tilt = { on: false, ang: 0, a0: null, steer: 0 };
+const tiltInv = $('tiltInv'); tiltInv.checked = store.get('hgp-tiltinv', false);
+tiltInv.onchange = () => store.set('hgp-tiltinv', tiltInv.checked);
+function onMotion(e) {
+  const g = e.accelerationIncludingGravity; if (!g || g.x == null) return;
+  const ang = Math.atan2(g.x, g.y);
+  tilt.ang = ang; if (tilt.a0 === null) tilt.a0 = ang;
+  let d = wrapA(ang - tilt.a0); if (Math.abs(d) < 0.05) d = 0;
+  tilt.steer = clamp(d / 0.42, -1, 1) * (tiltInv.checked ? -1 : 1);
+}
+async function enableTilt() {
+  if (tilt.on) return true;
+  try {
+    if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+      const r = await DeviceMotionEvent.requestPermission(); if (r !== 'granted') throw new Error('izin yok');
+    }
+    addEventListener('devicemotion', onMotion); tilt.on = true; tilt.a0 = null; return true;
+  } catch (e) { $('tiltNote').textContent = 'Eğim sensörüne izin verilmedi. Tuşlarla oynayabilirsin.'; return false; }
+}
+const tiltCal = () => { tilt.a0 = tilt.ang; tilt.steer = 0; };
+function ctlUI(m) {
+  $('ctlBtns').setAttribute('aria-pressed', String(m === 'buttons')); $('ctlTilt').setAttribute('aria-pressed', String(m === 'tilt'));
+  $('tSteer').hidden = m === 'tilt'; $('tTilt').hidden = m !== 'tilt';
+}
+async function setCtl(m) {
+  if (m === 'tilt' && !(await enableTilt())) m = 'buttons';
+  ctlMode = m; store.set('hgp-ctl', m); ctlUI(m);
+  if (m === 'tilt') tiltCal();
+}
+$('ctlBtns').onclick = () => setCtl('buttons');
+$('ctlTilt').onclick = () => setCtl('tilt');
+$('tCal').addEventListener('pointerdown', e => { e.preventDefault(); tiltCal(); });
+ctlUI(ctlMode);
+
+// her karede arayüz görünürlüğü
+const raceUI = () => state === 'race' || state === 'count' || state === 'finish' || state === 'paused';
+function uiTick() {
+  const portrait = innerHeight > innerWidth;
+  $('touch').hidden = !(coarse && raceUI());
+  $('rotate').hidden = !(coarse && portrait && raceUI());
+  $('tools').hidden = !(state === 'menu' || state === 'room' || state === 'boot' || state === 'results' || state === 'paused');
+}
 
 /* =========================================================
    BAŞLAT
@@ -1024,7 +1114,7 @@ function frame(t) {
   const dt = Math.min(0.05, (t - last) / 1000); last = t;
   update(dt); render(); drawJoy();
   if (state === 'menu' || state === 'room') for (const p of pickers) drawPreview(p, false);
-  $('touch').hidden = !(coarse && (state === 'race' || state === 'count' || state === 'finish'));
+  uiTick();
   requestAnimationFrame(frame);
 }
 async function init() {
