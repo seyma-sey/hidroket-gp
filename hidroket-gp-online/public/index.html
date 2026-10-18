@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Hidroket GP Online</title>
+<meta name="theme-color" content="#000000">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Hidroket GP">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: oyun ekranı tüm pencereyi kaplar; lobi ekranın üstünde, skor ve ayarlar çekmecede */
+:root{
+  --bg:#0a1f33; --deck:#0f2a44; --line:#1f4466; --ink:#e6eef5; --dim:#8fa8bd;
+  --blue:#2b9be0; --blue-d:#165e8c; --silver:#c3ccd4; --ok:#5fd16b; --warn:#ffb03b; --bad:#ff6a5e; --gold:#ffd84a;
+  --paper:#f4f6f8; --black:#0b0b0b;
+  --f-pix:"Press Start 2P", ui-monospace, Menlo, Consolas, monospace;
+  --f-body:"JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#000;color:var(--ink);overscroll-behavior:none}
+body{font-family:var(--f-body);font-size:14px;line-height:1.5;overflow:hidden;-webkit-tap-highlight-color:transparent}
+#app{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+  padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
+
+.screen{position:relative;width:min(100%,calc(100vh * 16 / 9));width:min(100%,calc(100dvh * 16 / 9));background:#000}
+#game{display:block;width:100%;height:auto;aspect-ratio:16/9;image-rendering:pixelated;image-rendering:crisp-edges;touch-action:none;user-select:none;-webkit-user-select:none}
+
+/* araç çubuğu */
+.tools{position:absolute;top:6px;right:6px;display:flex;gap:6px;z-index:6}
+.ibtn{width:38px;height:38px;display:grid;place-items:center;background:rgba(7,20,37,.85);border:2px solid var(--line);color:var(--ink);cursor:pointer;padding:0}
+.ibtn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:square}
+.ibtn:hover{border-color:var(--blue)}
+.ibtn[aria-pressed="true"]{color:var(--gold)}
+
+/* lobi katmanı */
+.overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:14px 56px 14px 14px;pointer-events:none;z-index:4}
+.card{pointer-events:auto;background:rgba(7,20,37,.93);border:2px solid var(--line);box-shadow:0 0 0 2px #06121e,0 12px 40px rgba(0,0,0,.5);
+  padding:18px;width:min(640px,100%);max-height:100%;overflow:auto;display:flex;flex-direction:column;gap:14px}
+.card h2{font-family:var(--f-pix);font-size:11px;letter-spacing:.06em;color:var(--dim);margin:0;font-weight:400}
+.brand{display:flex;align-items:center;gap:10px;background:var(--paper);padding:7px 12px 7px 10px;border-radius:3px;align-self:flex-start}
+.brand img{display:block;height:26px;width:auto}
+.brand img.word{height:17px}
+.brand b{font-family:var(--f-pix);font-size:11px;color:var(--black);font-weight:400;margin-left:4px}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-family:var(--f-pix);font-size:9px;color:var(--dim);letter-spacing:.05em}
+input[type=text]{font-family:var(--f-pix);font-size:13px;background:#061526;color:var(--ink);border:2px solid var(--line);padding:11px 12px;width:100%;min-width:0;border-radius:0}
+input[type=text]:focus{border-color:var(--blue);outline:none}
+input#code{text-transform:uppercase;letter-spacing:.3em;width:8.5em;flex:none}
+.cars{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.carbtn{background:#0b2238;border:2px solid var(--line);color:var(--ink);padding:6px 4px 8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
+.carbtn canvas{width:100%;max-width:120px;height:auto;aspect-ratio:2/1;image-rendering:pixelated}
+.carbtn .nm{font-family:var(--f-pix);font-size:8px;line-height:1.3}
+.carbtn .tr{font-size:10px;color:var(--dim);line-height:1.2;text-align:center}
+.carbtn[aria-pressed="true"]{border-color:var(--gold);background:#13304d}
+.carbtn[aria-pressed="true"] .nm{color:var(--gold)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.row.split{justify-content:space-between}
+.btn{font-family:var(--f-pix);font-size:10px;line-height:1.4;padding:12px 14px;background:var(--blue);color:#fff;border:0;border-radius:2px;box-shadow:0 4px 0 var(--blue-d);cursor:pointer;white-space:nowrap}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--blue-d)}
+.btn.go{background:#2f9e48;box-shadow:0 4px 0 #1b6a2d}
+.btn.ghost{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 2px var(--line)}
+.btn.ghost:active{transform:translateY(1px)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visible,.carbtn:focus-visible,.tab:focus-visible,.ibtn:focus-visible{outline:2px solid var(--warn);outline-offset:2px}
+.sep{display:flex;align-items:center;gap:10px;color:var(--dim);font-size:11px}
+.sep::before,.sep::after{content:"";flex:1;height:1px;background:var(--line)}
+.status{display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--silver)}
+.dot{width:10px;height:10px;flex:none;margin-top:5px;background:var(--dim)}
+.status[data-s="ok"] .dot{background:var(--ok)} .status[data-s="bad"] .dot{background:var(--bad)} .status[data-s="wait"] .dot{background:var(--warn)}
+.err{color:var(--bad);font-size:13px;margin:0;min-height:1.2em}
+.code-big{font-family:var(--f-pix);font-size:28px;letter-spacing:.25em;color:var(--gold);line-height:1}
+.plist{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px}
+.plist li{display:flex;align-items:center;gap:8px;background:#0b2238;border:1px solid var(--line);padding:8px 10px;font-size:13px;min-width:0}
+.plist li .sw{width:10px;height:10px;flex:none}
+.plist li .pn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
+.plist li .tag{font-family:var(--f-pix);font-size:7px;color:var(--gold);flex:none}
+.plist li .tag.you{color:var(--blue)}
+.note{font-size:12.5px;color:var(--dim);margin:0;max-width:70ch}
+.note b{color:var(--warn);font-weight:600}
+
+/* dokunmatik tuşlar */
+.touch{position:absolute;inset:auto 0 0 0;display:flex;justify-content:space-between;align-items:flex-end;padding:8px 10px;pointer-events:none;z-index:3}
+.touch .grp{display:flex;gap:clamp(6px,2vmin,14px);align-items:flex-end;pointer-events:auto}
+.touch button{--s:clamp(46px,17vmin,96px);width:var(--s);height:var(--s);border-radius:50%;border:2px solid rgba(255,255,255,.55);background:rgba(10,31,51,.45);color:#fff;
+  font-family:var(--f-pix);font-size:clamp(7px,2vmin,11px);touch-action:none;user-select:none;-webkit-user-select:none;padding:0}
+.touch button.big{--s:clamp(58px,22vmin,124px)}
+.touch button.sm{--s:clamp(34px,11vmin,60px);font-size:clamp(6px,1.6vmin,9px)}
+.touch button.on{background:rgba(43,155,224,.75)}
+#tSteer button{font-size:clamp(16px,6vmin,32px)}
+.touch .col{display:flex;flex-direction:column;gap:clamp(6px,2vmin,14px);align-items:center}
+
+.rotate{position:fixed;inset:0;z-index:30;background:#0a1f33;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;text-align:center;padding:24px}
+.rotate svg{width:88px;height:88px;fill:none;stroke:var(--gold);stroke-width:3}
+.rotate p{font-family:var(--f-pix);font-size:12px;line-height:1.8;margin:0}
+
+/* çekmeceler */
+.drawer{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:max(12px,env(safe-area-inset-top,0px)) 12px max(12px,env(safe-area-inset-bottom,0px))}
+.dcard{background:var(--bg);border:2px solid var(--line);width:min(760px,100%);max-height:100%;overflow:auto;padding:18px;display:flex;flex-direction:column;gap:16px}
+.dhead{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.dhead h2{font-family:var(--f-pix);font-size:12px;margin:0;font-weight:400;color:var(--ink)}
+.panel{background:var(--deck);border:1px solid var(--line);padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.panel h3{font-family:var(--f-pix);font-size:10px;letter-spacing:.06em;color:var(--dim);margin:0;font-weight:400}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+select{font-family:var(--f-body);font-size:13px;background:var(--bg);color:var(--ink);border:1px solid var(--line);padding:8px}
+label.chk{display:flex;gap:8px;align-items:center;color:var(--silver);font-size:13px;cursor:pointer}
+.joy{display:flex;gap:14px;align-items:center}
+#joyviz{width:96px;height:96px;image-rendering:pixelated;background:var(--bg);border:1px solid var(--line);flex:none}
+.readout{font-variant-numeric:tabular-nums;font-size:13px;color:var(--silver);display:grid;grid-template-columns:auto auto;gap:2px 12px}
+.readout b{color:var(--ink);font-weight:600}
+dl.keys{margin:0;display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:13px}
+dl.keys dt{color:var(--blue);font-weight:600} dl.keys dd{margin:0;color:var(--silver)}
+.seg{display:flex;border:2px solid var(--line);align-self:flex-start}
+.seg button{font-family:var(--f-pix);font-size:9px;padding:10px 12px;background:transparent;color:var(--dim);border:0;cursor:pointer}
+.seg button[aria-pressed="true"]{background:#13304d;color:var(--gold)}
+
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tab{font-family:var(--f-pix);font-size:9px;padding:9px 10px;background:transparent;color:var(--dim);border:1px solid var(--line);cursor:pointer}
+.tab[aria-selected="true"]{background:#13304d;color:var(--gold);border-color:var(--gold)}
+.lbwrap{overflow-x:auto}
+table.lb{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric:tabular-nums}
+table.lb th{font-family:var(--f-pix);font-size:8px;color:var(--dim);font-weight:400;text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
+table.lb td{padding:7px 8px;border-bottom:1px solid #16385a;white-space:nowrap}
+table.lb td.r{font-family:var(--f-pix);font-size:10px;color:var(--dim);width:2.5em}
+table.lb tr.top1 td.r{color:var(--gold)} table.lb tr.top2 td.r{color:#d7dde3} table.lb tr.top3 td.r{color:#e09a5a}
+table.lb tr.me td{background:#13304d}
+table.lb td.t{text-align:right;color:var(--ink);font-weight:600}
+table.lb .sw{display:inline-block;width:9px;height:9px;margin-right:6px;vertical-align:0}
+.empty{color:var(--dim);font-size:13px;margin:0}
+details summary{font-family:var(--f-pix);font-size:10px;letter-spacing:.06em;color:var(--ink);cursor:pointer;list-style:none}
+details summary::before{content:"▶ ";color:var(--blue)} details[open] summary::before{content:"▼ "}
+details[open] summary{margin-bottom:12px}
+table.pins{border-collapse:collapse;font-size:13px;margin-bottom:12px}
+table.pins td,table.pins th{border:1px solid var(--line);padding:6px 10px;text-align:left} table.pins th{color:var(--dim);font-weight:400}
+pre{margin:0;background:#061526;border:1px solid var(--line);padding:14px;overflow-x:auto;font-size:12.5px;line-height:1.55;color:#cfe2f0}
+
+/* alçak yatay ekranlar (telefon yatay) */
+@media (max-height:540px){
+  .overlay{padding:8px 52px 8px 8px}
+  .card{padding:12px;gap:10px}
+  .brand{display:none}
+  .carbtn{padding:3px 2px 5px;gap:2px}
+  .carbtn canvas{max-width:84px}
+  .carbtn .tr{display:none}
+  .btn{padding:10px 11px;font-size:9px}
+  input[type=text]{padding:8px 10px;font-size:11px}
+  .sep{display:none}
+  .code-big{font-size:20px}
+  .ibtn{width:34px;height:34px}
+}
+/* dikey ekran: oyun üstte, lobi altta kaydırılabilir */
+@media (max-aspect-ratio:1/1){
+  body{overflow:auto}
+  #app{position:static;display:block;min-height:100%}
+  .screen{width:100%}
+  .overlay{position:static;padding:0}
+  .card{width:100%;max-height:none;border-left:0;border-right:0;box-shadow:none}
+  .cars{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (prefers-reduced-motion:reduce){.btn:active{transform:none}}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="screen" id="screen">
+    <canvas id="game" width="384" height="216" aria-label="Hidroket GP yarış ekranı"></canvas>
+
+    <div class="tools" id="tools">
+      <button class="ibtn" id="fsBtn" aria-label="Tam ekran" title="Tam ekran"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg></button>
+      <button class="ibtn" id="boardBtn" aria-label="Skor tablosu" title="Skor tablosu"><svg viewBox="0 0 24 24"><path d="M7 4h10v5a5 5 0 0 1-10 0zM7 6H3v2a4 4 0 0 0 4 4M17 6h4v2a4 4 0 0 1-4 4M12 14v4M8 20h8"/></svg></button>
+      <button class="ibtn" id="setBtn" aria-label="Ayarlar ve joystick" title="Ayarlar ve joystick"><svg viewBox="0 0 24 24"><path d="M6 12h12M12 6v12"/><rect x="3" y="7" width="18" height="10" rx="5"/></svg></button>
+      <button class="ibtn" id="muteBtn" aria-label="Ses" title="Ses"><svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4zM16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/></svg></button>
+    </div>
+
+    <div class="touch" id="touch" hidden>
+      <div class="grp" id="tSteer"><button data-k="arrowleft" aria-label="Sola">◀</button><button data-k="arrowright" aria-label="Sağa">▶</button></div>
+      <div class="grp" id="tTilt" hidden><button class="sm" id="tCal" aria-label="Direksiyonu ortala">ORTA</button></div>
+      <div class="grp">
+        <div class="col"><button class="sm" data-k="shift" aria-label="Turbo">H2</button><button data-k="arrowdown" aria-label="Fren">FREN</button></div>
+        <button class="big" data-k="arrowup" aria-label="Gaz">GAZ</button>
+      </div>
+    </div>
+
+    <div class="overlay" id="overlay">
+      <!-- giriş -->
+      <section class="card" id="scrEntry">
+        <div class="brand" aria-label="hidroket"><img id="brandEm" alt=""><img id="brandWord" class="word" alt="hidroket"><b>GP</b></div>
+        <div class="field">
+          <label for="name">PİLOT ADI</label>
+          <input type="text" id="name" maxlength="14" autocomplete="nickname" placeholder="örn. Rahmet" spellcheck="false">
+        </div>
+        <div class="field">
+          <label>ARACINI SEÇ</label>
+          <div class="cars" id="carsEntry"></div>
+        </div>
+        <div class="row">
+          <button class="btn go" id="btnQuick">HIZLI KATIL</button>
+          <button class="btn" id="btnCreate">ODA KUR</button>
+          <input type="text" id="code" maxlength="4" placeholder="KOD" aria-label="Oda kodu" autocomplete="off" spellcheck="false">
+          <button class="btn ghost" id="btnJoin">KATIL</button>
+        </div>
+        <p class="err" id="entryErr" role="alert"></p>
+        <div class="sep">ya da</div>
+        <div class="row split">
+          <button class="btn ghost" id="btnPractice">ANTRENMAN (3 BOT)</button>
+          <div class="status" id="netStatus" data-s="wait"><span class="dot"></span><span id="netText">Sunucuya bağlanılıyor…</span></div>
+        </div>
+      </section>
+
+      <!-- oda -->
+      <section class="card" id="scrRoom" hidden>
+        <div class="row split">
+          <div>
+            <h2>ODA KODU</h2>
+            <div class="code-big" id="roomCode">----</div>
+          </div>
+          <div class="row">
+            <button class="btn ghost" id="btnCopyLink">LİNKİ KOPYALA</button>
+            <button class="btn ghost" id="btnLeave">AYRIL</button>
+          </div>
+        </div>
+        <p class="note" id="shareNote">Arkadaşların bu sayfayı açıp kodu girerek ya da linkle katılır.</p>
+        <div class="field">
+          <label>PİLOTLAR <span id="pcount"></span></label>
+          <ul class="plist" id="plist"></ul>
+        </div>
+        <div class="field">
+          <label>ARACIN</label>
+          <div class="cars" id="carsRoom"></div>
+        </div>
+        <p class="err" id="roomErr" role="alert"></p>
+        <div class="row split">
+          <p class="note" id="roomNote"></p>
+          <button class="btn go" id="btnStart">YARIŞI BAŞLAT</button>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<div class="rotate" id="rotate" hidden>
+  <svg viewBox="0 0 64 64"><rect x="20" y="8" width="24" height="44" rx="3"/><path d="M14 46a24 24 0 0 0 30 10M44 56l-1-7 7 1"/></svg>
+  <p>TELEFONU<br>YAN ÇEVİR</p>
+</div>
+
+<!-- skor tablosu çekmecesi -->
+<div class="drawer" id="drawerBoard" hidden>
+  <div class="dcard" role="dialog" aria-label="Skor tablosu">
+    <div class="dhead"><h2>SKOR TABLOSU</h2><button class="btn ghost" data-close>KAPAT</button></div>
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" id="tabLap" aria-selected="true">EN HIZLI TUR</button>
+      <button class="tab" role="tab" id="tabRace" aria-selected="false">3 TUR YARIŞ</button>
+    </div>
+    <div class="lbwrap"><table class="lb" id="lb"><thead><tr><th>#</th><th>PİLOT</th><th>ARAÇ</th><th style="text-align:right">SÜRE</th></tr></thead><tbody></tbody></table></div>
+    <p class="empty" id="lbEmpty">Henüz kayıt yok. İlk turu sen at.</p>
+  </div>
+</div>
+
+<!-- ayarlar çekmecesi -->
+<div class="drawer" id="drawerSet" hidden>
+  <div class="dcard" role="dialog" aria-label="Ayarlar">
+    <div class="dhead"><h2>AYARLAR</h2><button class="btn ghost" data-close>KAPAT</button></div>
+    <div class="grid2">
+      <section class="panel">
+        <h3>ARDUINO JOYSTICK</h3>
+        <div class="row">
+          <button class="btn" id="connectBtn">ARDUINO'YU BAĞLA</button>
+          <select id="baud" aria-label="Baud hızı"><option>9600</option><option>57600</option><option selected>115200</option></select>
+        </div>
+        <div class="status" id="status" data-s="idle"><span class="dot"></span><span id="statusText">Bağlı değil. Klavyeyle de oynayabilirsin.</span></div>
+        <div class="joy">
+          <canvas id="joyviz" width="48" height="48"></canvas>
+          <div class="readout">
+            <span>Ham X</span><b id="rx">—</b>
+            <span>Ham Y</span><b id="ry">—</b>
+            <span>Buton</span><b id="rb">—</b>
+            <span>Veri</span><b id="rate">0/sn</b>
+          </div>
+        </div>
+        <div class="row">
+          <button class="btn ghost" id="calBtn">MERKEZİ AYARLA</button>
+          <label class="chk"><input type="checkbox" id="invX"> X ters</label>
+          <label class="chk"><input type="checkbox" id="invY"> Y ters</label>
+        </div>
+      </section>
+      <section class="panel">
+        <h3>TELEFON KONTROLÜ</h3>
+        <div class="seg" role="group" aria-label="Direksiyon">
+          <button id="ctlBtns" aria-pressed="true">TUŞLAR</button>
+          <button id="ctlTilt" aria-pressed="false">EĞEREK SÜR</button>
+        </div>
+        <label class="chk"><input type="checkbox" id="tiltInv"> Eğme yönünü ters çevir</label>
+        <p class="note" id="tiltNote">Eğerek sür: telefonu direksiyon gibi sağa sola çevir. Yarış başında düz tuttuğun an "orta" kabul edilir; ORTA tuşuyla yeniden ortalayabilirsin.</p>
+        <h3>NASIL OYNANIR</h3>
+        <dl class="keys">
+          <dt>Gaz / Fren</dt><dd>↑ ↓ · W S · GAZ / FREN · joystick ileri / geri</dd>
+          <dt>Direksiyon</dt><dd>← → · A D · ◀ ▶ · joystick sağ / sol</dd>
+          <dt>H2 Turbo</dt><dd>Space / Shift · H2 · joystick butonu</dd>
+          <dt>Oda sahibi</dt><dd>Enter veya joystick butonu ile başlatır</dd>
+        </dl>
+        <p class="note">iPhone'da gerçek tam ekran için: Safari'de Paylaş → <b>Ana Ekrana Ekle</b>, oyunu oradaki simgeden aç.</p>
+      </section>
+    </div>
+    <details class="panel">
+      <summary>ARDUINO KODU VE KABLOLAMA</summary>
+      <table class="pins">
+        <tr><th>Joystick</th><th>Nano</th></tr>
+        <tr><td>VRx</td><td>A0</td></tr><tr><td>VRy</td><td>A1</td></tr><tr><td>SW</td><td>D2</td></tr>
+        <tr><td>+5V</td><td>5V</td></tr><tr><td>GND</td><td>GND</td></tr>
+      </table>
+<pre id="codeIno">const int PIN_X  = A0;
+const int PIN_Y  = A1;
+const int PIN_SW = 2;
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(PIN_SW, INPUT_PULLUP);
+}
+
+void loop() {
+  int x = analogRead(PIN_X);
+  int y = analogRead(PIN_Y);
+  int b = (digitalRead(PIN_SW) == LOW) ? 1 : 0;
+  Serial.print(x); Serial.print(',');
+  Serial.print(y); Serial.print(',');
+  Serial.println(b);
+  delay(20);
+}</pre>
+      <p class="note">Bağlanmadan önce Arduino IDE'nin Seri Port Ekranını kapat. Web Serial yalnızca bilgisayarda <b>Chrome ve Edge</b>'de çalışır.</p>
+    </details>
+  </div>
+</div>
+
+<script src="logo.js"></script>
+<script src="models.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
