@@ -6,7 +6,7 @@
    ========================================================= */
 const W = 384, H = 216, HY = 74, F = 192, CAMH = 15, CAMD = 34;
 const PITCH = Math.atan2(CAMH, CAMD);
-const TS = 2048, TW = 56, LAPS = 3, TAU = Math.PI * 2, PW = W * 4;
+const TS = 2048, TAU = Math.PI * 2, PW = W * 4;
 const M = window.HGP_MODELS, VW = 16 / M.L;
 const SN = 48, SS = 1.5, SW_ = 96, SH_ = 64, SOX = 48, SOY = 46;
 
@@ -78,12 +78,15 @@ const CARK = Object.fromEntries(CARS.map(c => [c.key, c]));
 let selCar = CARK[store.get('hgp-car', 'turaz')] ? store.get('hgp-car', 'turaz') : 'turaz';
 
 /* =========================================================
-   VARLIKLAR (init içinde kurulur)
+   VARLIKLAR
    ========================================================= */
 let workshop, workshopEmpty, imgPine, imgPine2, imgAutumn, imgTires, imgBanner, imgStand, imgGantry, imgH2;
-let track, NS, SX, SY, TX, TY, KV, GRAV, WS_I, WS, ST_I, STAND, tc, tex, MIPS, mip, OUTCOL, SKID, pano, minimap, mmScale;
+let imgBox, imgCone, imgBarrel, imgOil, imgPalm, imgCypress, imgPoplar, imgYacht, imgDarkPine;
+const BUILDINGS = [], ICONS = {};
+let NS, SX, SY, TX, TY, KV, GRAV, WS_I, WS, ST_I, STAND, tc, tex, MIPS, mip, OUTCOL, SKID, pano, minimap, mmScale;
+let TW = 56, TK = null, TH = null;
 const RNX = i => -TY[i], RNY = i => TX[i];
-const objs = [], grid = new Map(), GC = 64, pickups = [];
+const objs = [], grid = new Map(), GC = 64, pickups = [], boxes = [], obst = [], haz = [];
 const MM = 78;
 
 function pine(g, x, base, h, dark, light) {
@@ -113,14 +116,12 @@ function makeWorkshop(withCar) {
   g.fillStyle = '#262b32'; g.fillRect(70, 55, 54, 33);
   g.fillStyle = '#3a414b'; g.fillRect(74, 61, 12, 1); g.fillRect(74, 67, 12, 1); g.fillRect(108, 62, 12, 1); g.fillRect(110, 58, 3, 4); g.fillRect(76, 58, 4, 3);
   g.fillStyle = '#9aa3ad'; g.fillRect(69, 54, 56, 1); g.fillRect(69, 54, 1, 34); g.fillRect(124, 54, 1, 34);
-  // tabela: gerçek logo
   g.fillStyle = '#f4f6f8'; g.fillRect(70, 47, 54, 8); g.drawImage(LOGO.wdB44, 75, 49);
   g.fillStyle = '#ffffff'; g.fillRect(142, 51, 22, 16); g.drawImage(LOGO.emB18, 144, 53);
   g.fillStyle = '#c3c9cf'; g.fillRect(130, 62, 10, 26); g.fillStyle = '#8a929b'; g.fillRect(137, 74, 2, 2);
   g.fillStyle = '#33414d'; g.fillRect(38, 58, 18, 10); g.fillStyle = '#a9b4be'; g.fillRect(46, 58, 1, 10); g.fillRect(38, 62, 18, 1);
   g.fillStyle = '#9b9a92'; g.fillRect(0, 88, 192, 12);
   g.fillStyle = '#8c8b83'; for (let x = 0; x < 192; x += 6) g.fillRect(x, 88, 1, 12); g.fillRect(0, 94, 192, 1);
-  g.fillStyle = '#8a7a5c'; g.fillRect(0, 92, 40, 8); g.fillRect(150, 94, 42, 6);
   g.fillStyle = '#d8dde1'; g.fillRect(2, 74, 22, 14); g.fillStyle = '#5d6d7a'; g.fillRect(4, 70, 14, 8); g.fillStyle = '#b6bcc2'; g.fillRect(8, 78, 10, 10);
   g.fillStyle = '#e8742a'; g.fillRect(17, 78, 8, 11); g.fillStyle = '#222'; g.fillRect(16, 77, 10, 2);
   g.fillStyle = '#8a6a44'; g.fillRect(150, 82, 30, 2); g.fillRect(152, 84, 1, 6); g.fillRect(177, 84, 1, 6);
@@ -128,12 +129,37 @@ function makeWorkshop(withCar) {
   if (withCar) M.renderCar(g, CARK.turaz.model, -Math.PI / 2 + 0.45, 0.85, 97, 96, PITCH, 'rgba(10,14,20,.6)');
   return c;
 }
+function makeBuilding(r) {
+  const w = 26 + (r() * 22 | 0), h = 34 + (r() * 46 | 0);
+  const [c, g] = mk(w, h + 4);
+  const walls = ['#efe4cf', '#e8c9a8', '#f2d6b8', '#f6f1e6', '#e2b48f', '#d9c7a3', '#f0d9c4'];
+  const wall = walls[r() * walls.length | 0], shade = '#00000022';
+  g.fillStyle = wall; g.fillRect(0, 4, w, h);
+  g.fillStyle = shade; g.fillRect(w - 3, 4, 3, h);
+  g.fillStyle = '#b55a3a'; g.fillRect(0, 0, w, 5); g.fillStyle = '#8e4128'; g.fillRect(0, 4, w, 1);
+  const shut = r() < 0.5 ? '#4f7a54' : '#6d8a9e';
+  for (let y = 9; y < h - 6; y += 8) for (let x = 3; x < w - 5; x += 6) {
+    g.fillStyle = '#2b3440'; g.fillRect(x, y, 3, 4); g.fillStyle = shut; g.fillRect(x - 1, y, 1, 4); g.fillRect(x + 3, y, 1, 4);
+    if (r() < 0.3) { g.fillStyle = '#ffffff55'; g.fillRect(x - 1, y + 4, 5, 1); }
+  }
+  g.fillStyle = '#7d6f5d'; g.fillRect(0, h, w, 4);
+  g.fillStyle = '#3b3328'; g.fillRect((w / 2 | 0) - 2, h - 6, 4, 6);
+  return c;
+}
 function buildArt() {
   workshop = makeWorkshop(true); workshopEmpty = makeWorkshop(false);
   imgPine = (() => { const [c, g] = mk(18, 36); pine(g, 9, 33, 32, '#1b5a33', '#2e8049'); return c; })();
   imgPine2 = (() => { const [c, g] = mk(18, 36); pine(g, 9, 33, 26, '#22633a', '#38904f'); return c; })();
+  imgDarkPine = (() => { const [c, g] = mk(18, 40); pine(g, 9, 37, 36, '#123d25', '#1d5735'); return c; })();
   imgAutumn = (() => { const [c, g] = mk(22, 28); const r = rng(5); g.fillStyle = '#6b4a2a'; g.fillRect(10, 14, 2, 14);
     for (let i = 0; i < 90; i++) { const a = r() * TAU, d = Math.sqrt(r()) * 9; g.fillStyle = r() < 0.3 ? '#c99a22' : r() < 0.5 ? '#f0cf45' : '#e2b72f'; g.fillRect(11 + Math.cos(a) * d | 0, 10 + Math.sin(a) * d * 0.85 | 0, 2, 2); } return c; })();
+  imgCypress = (() => { const [c, g] = mk(10, 36); for (let y = 0; y < 32; y++) { const w = Math.round(Math.sin(Math.min(1, y / 26) * Math.PI * 0.55) * 4) + 1; g.fillStyle = '#1f4a2c'; g.fillRect(5 - w, y, w * 2, 1); g.fillStyle = '#2f6a3c'; g.fillRect(5 - w, y, Math.max(1, w - 1), 1); } g.fillStyle = '#5a3a1e'; g.fillRect(4, 32, 2, 4); return c; })();
+  imgPoplar = (() => { const [c, g] = mk(12, 34); const r = rng(8); for (let i = 0; i < 70; i++) { const y = r() * 28, w = Math.sin(y / 28 * Math.PI) * 4.5; g.fillStyle = r() < .5 ? '#7a9a3a' : '#9ab84a'; g.fillRect(6 + (r() - .5) * 2 * w | 0, y | 0, 2, 2); } g.fillStyle = '#6b5a3a'; g.fillRect(5, 26, 2, 8); return c; })();
+  imgPalm = (() => { const [c, g] = mk(26, 36); g.fillStyle = '#8a6a44'; for (let y = 10; y < 36; y++) g.fillRect(13 + Math.round(Math.sin(y / 9) * 2), y, 2, 1);
+    g.fillStyle = '#2f7a3a'; for (const [dx, dy] of [[-11, 4], [11, 4], [-8, 9], [8, 9], [-4, -1], [4, -1], [0, 11]]) { for (let t = 0; t <= 1; t += 0.08) g.fillRect(13 + dx * t | 0, 10 + dy * t * t - 3 * t | 0, 2, 2); }
+    g.fillStyle = '#3f9a4a'; g.fillRect(11, 8, 5, 3); return c; })();
+  imgYacht = (() => { const [c, g] = mk(34, 18); g.fillStyle = '#f4f6f8'; g.beginPath(); g.moveTo(0, 11); g.lineTo(34, 11); g.lineTo(28, 17); g.lineTo(4, 17); g.fill();
+    g.fillStyle = '#1d3d5a'; g.fillRect(4, 13, 26, 1); g.fillStyle = '#e8ecef'; g.fillRect(9, 6, 16, 5); g.fillStyle = '#2b3d4f'; g.fillRect(11, 7, 12, 2); g.fillStyle = '#9aa3ad'; g.fillRect(17, 0, 1, 6); return c; })();
   imgTires = sprite(["..kkkkkk..", ".kwwwwwwk.", "kkkkkkkkkk", ".kkkkkkkk.", "kkkkkkkkkk", ".kwwwwwwk.", "kkkkkkkkkk", ".kkkkkkkk."], { k: '#1c1c1c', w: '#e8e8e8' });
   imgBanner = (() => { const [c, g] = mk(64, 26); g.fillStyle = '#6d7680'; g.fillRect(3, 14, 2, 12); g.fillRect(59, 14, 2, 12);
     g.fillStyle = '#f4f6f8'; g.fillRect(0, 0, 64, 16); g.drawImage(LOGO.emB18, 3, 2); g.drawImage(LOGO.wdB38, 23, 5); g.fillStyle = '#2a94d8'; g.fillRect(0, 15, 64, 1); return c; })();
@@ -146,17 +172,46 @@ function buildArt() {
     g.fillStyle = '#10304a'; g.fillRect(0, 2, 96, 16); g.fillStyle = '#2a94d8'; g.fillRect(0, 17, 96, 1);
     g.drawImage(LOGO.emW18, 6, 4); g.drawImage(LOGO.wdW52, 27, 6); tiny(g, 'GP', 82, 7, '#ffd84a'); return c; })();
   imgH2 = sprite(["..kkkk..", ".cccccc.", ".cwccwc.", ".cwccwc.", ".cwwwwc.", ".cwccwc.", ".cwccwc.", ".cccccc.", ".CCCCCC.", "..CCCC.."], { c: '#3fd0f0', C: '#1f8fb8', w: '#ffffff', k: '#5a5a5a' });
+  imgBox = sprite([
+    "KKKKKKKKKKKK", "KBBBBBBBBBBK", "KBLWWWWWWLBK", "KBWWBBBBWWBK", "KBBBBBBBWWBK", "KBBBBBBWWBBK",
+    "KBBBBBWWBBBK", "KBBBBBWWBBBK", "KBBBBBBBBBBK", "KBBBBBWWBBBK", "KBBBBBBBBBBK", "KKKKKKKKKKKK"],
+    { K: '#0b2a44', B: '#2a94d8', L: '#79c8f2', W: '#ffffff' });
+  imgCone = sprite(["...O", "..OO", "..ww", ".OOO", ".www", "OOOO", "kkkk"], { O: '#ff7a1a', w: '#ffffff', k: '#3a3a3a' }, true);
+  imgBarrel = sprite([".rrrrrr.", "rrrrrrrr", "wwwwwwww", "rrrrrrrr", "rrrrrrrr", "wwwwwwww", "rrrrrrrr", ".RRRRRR."], { r: '#d8322a', R: '#9a1c16', w: '#f4f4f4' });
+  imgOil = (() => { const [c, g] = mk(18, 6); g.fillStyle = '#111316'; g.beginPath(); g.ellipse(9, 3, 9, 3, 0, 0, TAU); g.fill(); g.fillStyle = '#3b3f6a'; g.fillRect(5, 2, 4, 1); g.fillStyle = '#5a3f6a'; g.fillRect(10, 3, 3, 1); return c; })();
+  // eşya simgeleri (12x12)
+  const ic = (rows, pal) => sprite(rows, pal);
+  ICONS.turbo = ic(["....kk......", "...cccc.....", "...cwcc.....", "...cwcc.....", "...cwcc.....", "...cccc.....", "...cccc.....", "...CCCC.....", "....oo......", "...oyyo.....", "....oo......", "............"].map(r => r.replace(/\./g, '.')), { k: '#5a5a5a', c: '#3fd0f0', C: '#1f8fb8', w: '#fff', o: '#ff7a1a', y: '#ffd84a' });
+  ICONS.super = ic(["....kk..y...", "...gggg.yy..", "...gwgg.....", "...gwgg..y..", "...gwgg.....", "...gggg.....", "...gggg.....", "...GGGG.....", "...oooo.....", "..oyyyyo....", "...oyyo.....", "....oo......"], { k: '#5a5a5a', g: '#ffd84a', G: '#c9a020', w: '#fff', o: '#ff7a1a', y: '#fff6b0' });
+  ICONS.oil = ic(["......k.....", ".....kk.....", ".....kkk....", "....kkkk....", "...kkkkkk...", "...kkpkkk...", "..kkkpkkkk..", "..kkkkkkkk..", "..kkkkkkkk..", "...kkkkkk...", "....kkkk....", "............"], { k: '#16181c', p: '#6a5aa8' });
+  ICONS.shield = ic(["............", "..bbbbbbbb..", "..bLLLLLLb..", "..bLwwwwLb..", "..bLwLLLLb..", "..bLLLLLLb..", "..bLLLLLLb..", "...bLLLLb...", "...bLLLLb...", "....bLLb....", ".....bb.....", "............"], { b: '#0b2a44', L: '#2a94d8', w: '#bfe9fb' });
+  ICONS.zap = ic([".......yy...", "......yy....", ".....yy.....", "....yy......", "...yyyyyy...", "......yy....", ".....yy.....", "....yy......", "...yy.......", "..yy........", "..y.........", "............"], { y: '#ffd84a' });
+  for (let i = 0; i < 10; i++) BUILDINGS.push(makeBuilding(rng(31 + i * 17)));
 }
 
-/* ---------------- pist ---------------- */
-const CP = [[500,1650],[900,1700],[1300,1700],[1620,1620],[1780,1420],[1760,1180],[1560,1080],[1320,1120],[1140,1040],
-  [1120,860],[1300,760],[1600,720],[1780,560],[1740,330],[1480,250],[1100,300],[850,420],[700,620],[820,820],[760,1000],
-  [520,1080],[330,1000],[260,1200],[300,1450]];
+/* =========================================================
+   PİSTLER
+   ========================================================= */
+const TRACKS = {
+  istanbul: { name: 'İSTANBUL PARK', short: 'İSTANBUL', tw: 56, theme: 'istanbul',
+    cp: [[1150,1760],[800,1760],[470,1730],[330,1600],[350,1430],[500,1340],[650,1280],[700,1140],[600,1010],[430,930],
+      [330,760],[380,560],[560,400],[820,320],[1080,340],[1260,470],[1300,660],[1200,820],[1150,980],[1290,1080],
+      [1500,1030],[1680,920],[1820,1000],[1840,1220],[1720,1380],[1560,1430],[1480,1560],[1360,1700]] },
+  monaco: { name: 'MONAKO', short: 'MONAKO', tw: 44, theme: 'monaco',
+    cp: [[950,1500],[660,1500],[450,1470],[370,1320],[420,1120],[500,920],[470,720],[540,540],[740,470],[900,560],
+      [1010,710],[1150,660],[1220,530],[1320,590],[1270,740],[1390,880],[1620,900],[1820,980],[1860,1180],[1720,1270],
+      [1640,1390],[1490,1430],[1400,1340],[1300,1430],[1190,1350],[1100,1440],[1050,1500]] },
+  spa: { name: 'SPA', short: 'SPA', tw: 58, theme: 'spa',
+    cp: [[760,1680],[520,1720],[360,1650],[400,1530],[590,1470],[760,1370],[830,1240],[790,1110],[880,900],[1030,650],
+      [1180,420],[1290,280],[1450,290],[1490,420],[1610,500],[1720,630],[1650,780],[1500,760],[1410,880],[1380,1030],
+      [1460,1160],[1610,1210],[1740,1330],[1790,1510],[1690,1660],[1480,1740],[1200,1770],[1010,1740],[900,1700]] }
+};
+const TRACK_KEYS = ['istanbul', 'monaco', 'spa'];
 const SPACING = 6;
-function buildTrack() {
-  const raw = [], n = CP.length;
+function centerline(cp) {
+  const raw = [], n = cp.length;
   for (let i = 0; i < n; i++) {
-    const p0 = CP[(i - 1 + n) % n], p1 = CP[i], p2 = CP[(i + 1) % n], p3 = CP[(i + 2) % n];
+    const p0 = cp[(i - 1 + n) % n], p1 = cp[i], p2 = cp[(i + 1) % n], p3 = cp[(i + 2) % n];
     for (let t = 0; t < 1; t += 1 / 60) {
       const t2 = t * t, t3 = t2 * t;
       const f = (a, b, c, d) => 0.5 * ((2 * b) + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3);
@@ -170,8 +225,67 @@ function buildTrack() {
     carry += seg - pos;
   }
   if (Math.hypot(pts[pts.length - 1][0] - pts[0][0], pts[pts.length - 1][1] - pts[0][1]) < SPACING * 0.5) pts.pop();
-  let s0 = 0, bd = 1e18; pts.forEach((p, i) => { const d = sq(p[0] - 880) + sq(p[1] - 1700); if (d < bd) { bd = d; s0 = i; } });
-  const P = pts.slice(s0).concat(pts.slice(0, s0));
+  return pts;   // cp[0]'dan başlar (başlangıç çizgisi)
+}
+function trackThumb(key, w, h) {
+  const pts = centerline(TRACKS[key].cp);
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const p of pts) { x0 = Math.min(x0, p[0]); y0 = Math.min(y0, p[1]); x1 = Math.max(x1, p[0]); y1 = Math.max(y1, p[1]); }
+  const s = Math.min((w - 8) / (x1 - x0), (h - 8) / (y1 - y0)), ox = (w - (x1 - x0) * s) / 2, oy = (h - (y1 - y0) * s) / 2;
+  const [c, g] = mk(w, h);
+  g.strokeStyle = '#e6eef5'; g.lineWidth = 2; g.lineJoin = 'round'; g.beginPath();
+  pts.forEach((p, i) => { const x = ox + (p[0] - x0) * s, y = oy + (p[1] - y0) * s; i ? g.lineTo(x, y) : g.moveTo(x, y); }); g.closePath(); g.stroke();
+  g.fillStyle = '#ffd84a'; g.fillRect(ox + (pts[0][0] - x0) * s - 2, oy + (pts[0][1] - y0) * s - 2, 4, 4);
+  return c;
+}
+
+/* ---------------- temalar ---------------- */
+const THEMES = {
+  istanbul: {
+    sky: ['#4a86cf', '#5d95d6', '#73a4db', '#8bb3dc', '#a5c0d8', '#c2cbcf', '#dccfbb', '#eccfa4', '#f3c98e', '#f6c37f'],
+    haze: 'rgba(240,206,160,', out: [0xb0, 0xa5, 0x5c],
+    ground(g, r) {
+      g.fillStyle = '#b0a55c'; g.fillRect(0, 0, TS, TS);
+      g.fillStyle = '#b9ae66'; for (let i = -TS; i < TS * 2; i += 110) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i + 55, 0); g.lineTo(i + 55 - TS, TS); g.lineTo(i - TS, TS); g.fill(); }
+      for (let i = 0; i < 30000; i++) { g.fillStyle = r() < 0.5 ? '#9f9550' : '#c4b874'; g.fillRect(r() * TS | 0, r() * TS | 0, 2, 1); }
+      for (let i = 0; i < 900; i++) { g.fillStyle = r() < .5 ? '#8a8a3a' : '#d8d08a'; g.fillRect(r() * TS | 0, r() * TS | 0, 3, 2); }
+    },
+    runoff: { col: '#686c72', dot: ['#5f6369', '#73777d'], band: '#2a62b8', surf: 'runoff' }
+  },
+  monaco: {
+    sky: ['#1d6fd6', '#2a7ddc', '#3a8ae0', '#4c98e4', '#5fa6e8', '#73b3ec', '#8ac1f0', '#a2cff3', '#badcf6', '#cfe7f8'],
+    haze: 'rgba(205,231,248,', out: [0xb8, 0xb1, 0xa3], walls: true,
+    ground(g, r) {
+      g.fillStyle = '#b8b1a3'; g.fillRect(0, 0, TS, TS);
+      for (let y = 0; y < TS; y += 8) for (let x = (y / 8 % 2) * 4; x < TS; x += 8) { g.fillStyle = r() < .5 ? '#b0a99b' : '#c1baac'; g.fillRect(x, y, 7, 7); }
+      // liman
+      g.fillStyle = '#7d7568'; g.fillRect(0, 1592, TS, 10);
+      g.fillStyle = '#1f6fb2'; g.fillRect(0, 1602, TS, TS - 1602);
+      for (let i = 0; i < 5000; i++) { g.fillStyle = r() < .6 ? '#2a7cc0' : '#9fd0f0'; g.fillRect(r() * TS | 0, 1606 + r() * (TS - 1606) | 0, 3, 1); }
+      for (let i = 0; i < 26; i++) { const x = 80 + i * 75 + r() * 30, y = 1650 + r() * 300; g.fillStyle = '#f4f6f8'; g.fillRect(x, y, 22, 7); g.fillStyle = '#8a939c'; g.fillRect(x + 6, y + 2, 9, 3); }
+      // yeşil adacıklar ve kumarhane bahçesi
+      g.fillStyle = '#5f8f4a'; g.beginPath(); g.ellipse(760, 640, 70, 40, 0.3, 0, TAU); g.fill();
+      g.fillStyle = '#d9c7a3'; g.fillRect(700, 600, 90, 30); g.fillStyle = '#b8a07a'; g.fillRect(700, 600, 90, 4);
+    },
+    runoff: null
+  },
+  spa: {
+    sky: ['#6f7f94', '#7a899d', '#8592a5', '#909cad', '#9ba6b5', '#a6b0bd', '#b1bac5', '#bcc4cd', '#c6cdd4', '#cfd5da'],
+    haze: 'rgba(200,207,214,', out: [0x2f, 0x7a, 0x34], rain: true,
+    ground(g, r) {
+      g.fillStyle = '#2f7a34'; g.fillRect(0, 0, TS, TS);
+      g.fillStyle = '#378a3b'; for (let i = -TS; i < TS * 2; i += 90) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i + 45, 0); g.lineTo(i + 45 - TS, TS); g.lineTo(i - TS, TS); g.fill(); }
+      for (let i = 0; i < 30000; i++) { g.fillStyle = r() < 0.5 ? '#286a2d' : '#3c9441'; g.fillRect(r() * TS | 0, r() * TS | 0, 2, 1); }
+      for (let i = 0; i < 1200; i++) { g.fillStyle = '#1f4f28'; g.fillRect(r() * TS | 0, r() * TS | 0, 3, 3); }
+    },
+    runoff: { col: '#cbbd8a', dot: ['#bfae78', '#e0d2a0'], band: null, surf: 'gravel' }
+  }
+};
+
+function useTrack(key) {
+  if (!TRACKS[key]) key = 'istanbul';
+  if (TK === key) return;
+  TK = key; const T = TRACKS[key]; TH = THEMES[T.theme]; TW = T.tw;
+  const P = centerline(T.cp);
   NS = P.length;
   SX = new Float32Array(NS); SY = new Float32Array(NS); TX = new Float32Array(NS); TY = new Float32Array(NS); KV = new Float32Array(NS); GRAV = new Uint8Array(NS);
   for (let i = 0; i < NS; i++) { SX[i] = P[i][0]; SY[i] = P[i][1]; }
@@ -180,30 +294,48 @@ function buildTrack() {
   for (let i = 0; i < NS; i++) { const a = (i - 4 + NS) % NS, b = (i + 4) % NS; Kr[i] = wrapA(Math.atan2(TY[b], TX[b]) - Math.atan2(TY[a], TX[a])) / (8 * SPACING); }
   for (let i = 0; i < NS; i++) { let s = 0; for (let k = -4; k <= 4; k++) s += Kr[(i + k + NS) % NS]; KV[i] = s / 9; }
   for (let i = 0; i < NS; i++) { let m = 0; for (let k = -8; k <= 8; k++) m = Math.max(m, Math.abs(KV[(i + k + NS) % NS])); GRAV[i] = m > 0.0062 ? 1 : 0; }
-  WS_I = Math.round(NS * 0.06) % NS;
-  WS = { x: SX[WS_I] + RNX(WS_I) * (TW / 2 + 78), y: SY[WS_I] + RNY(WS_I) * (TW / 2 + 78) };
+  // atölye (pit garajı) ve tribün yerini pistten uzak bir noktada bul
+  const clearAt = (x, y, m) => { for (let i = 0; i < NS; i += 2) if (sq(x - SX[i]) + sq(y - SY[i]) < sq(TW / 2 + m)) return false; return x > 90 && y > 90 && x < TS - 90 && y < TS - 90; };
+  WS = null;
+  for (const off of [0.04, 0.08, 0.12, 0.92, 0.88, 0.16]) for (const side of [1, -1]) {
+    if (WS) break; const i = Math.round(NS * off) % NS, d = TW / 2 + 78;
+    const x = SX[i] + RNX(i) * side * d, y = SY[i] + RNY(i) * side * d;
+    if (clearAt(x, y, 70) && !(TH.walls && y > 1560)) { WS = { x, y }; WS_I = i; WS.side = side; }
+  }
+  if (!WS) { WS_I = 0; WS = { x: SX[0] + RNX(0) * (TW / 2 + 78), y: SY[0] + RNY(0) * (TW / 2 + 78), side: 1 }; }
   ST_I = (NS - 18) % NS;
-  STAND = { x: SX[ST_I] - RNX(ST_I) * (TW / 2 + 40), y: SY[ST_I] - RNY(ST_I) * (TW / 2 + 40) };
+  const ss = -(WS.side || 1);
+  STAND = { x: SX[ST_I] + RNX(ST_I) * ss * (TW / 2 + 40), y: SY[ST_I] + RNY(ST_I) * ss * (TW / 2 + 40) };
+  buildTexture(); buildPano(); buildObjects();
+  haze = ctx.createLinearGradient(0, HY, 0, HY + 46); haze.addColorStop(0, TH.haze + '.85)'); haze.addColorStop(1, TH.haze + '0)');
 }
 const gridPos = slot => { const i = (NS - 6 - slot * 4 + NS) % NS, lat = (slot % 2 ? 1 : -1) * TW * 0.22; return { i, x: SX[i] + RNX(i) * lat + TX[i] * 4, y: SY[i] + RNY(i) * lat + TY[i] * 4, a: Math.atan2(TY[i], TX[i]) }; };
 const ABGR = (r, g, b) => (0xff000000 | (b << 16) | (g << 8) | r) >>> 0;
 function buildTexture() {
-  let tg; [tc, tg] = mk(TS, TS);
-  const r = rng(11);
-  tg.fillStyle = '#3e9a39'; tg.fillRect(0, 0, TS, TS);
-  tg.fillStyle = '#46a540';
-  for (let i = -TS; i < TS * 2; i += 96) { tg.beginPath(); tg.moveTo(i, 0); tg.lineTo(i + 48, 0); tg.lineTo(i + 48 - TS, TS); tg.lineTo(i - TS, TS); tg.fill(); }
-  for (let i = 0; i < 26000; i++) { tg.fillStyle = r() < 0.5 ? '#358a32' : '#52b04a'; tg.fillRect(r() * TS | 0, r() * TS | 0, 2, 1); }
-  for (let i = 0; i < 1600; i++) { tg.fillStyle = r() < 0.5 ? '#ffe36a' : '#ffffff'; tg.fillRect(r() * TS | 0, r() * TS | 0, 1, 1); }
+  let tg; if (!tc) [tc, tg] = mk(TS, TS); else { tg = tc.getContext('2d'); tg.setTransform(1, 0, 0, 1, 0, 0); tg.globalAlpha = 1; }
+  const r = rng(11 + TK.length);
+  TH.ground(tg, r);
   const path = () => { tg.beginPath(); for (let i = 0; i <= NS; i++) { const k = i % NS; i ? tg.lineTo(SX[k], SY[k]) : tg.moveTo(SX[k], SY[k]); } tg.closePath(); };
-  for (let i = 0; i < NS; i++) if (GRAV[i]) { const side = -Math.sign(KV[i]) || 1; tg.fillStyle = '#d6c48d'; tg.beginPath(); tg.arc(SX[i] + RNX(i) * side * (TW / 2 + 20), SY[i] + RNY(i) * side * (TW / 2 + 20), 25, 0, TAU); tg.fill(); }
-  for (let i = 0; i < 9000; i++) { const k = r() * NS | 0; if (!GRAV[k]) continue; const side = -Math.sign(KV[k]) || 1, d = TW / 2 + 4 + r() * 40, l = (r() - 0.5) * 12;
-    tg.fillStyle = r() < 0.5 ? '#bfae78' : '#e6d6a2'; tg.fillRect(SX[k] + RNX(k) * side * d + TX[k] * l | 0, SY[k] + RNY(k) * side * d + TY[k] * l | 0, 1, 1); }
+  // viraj dışı kaçış alanları
+  if (TH.runoff) {
+    const ro = TH.runoff;
+    for (let i = 0; i < NS; i++) if (GRAV[i]) { const side = -Math.sign(KV[i]) || 1; tg.fillStyle = ro.col; tg.beginPath(); tg.arc(SX[i] + RNX(i) * side * (TW / 2 + 20), SY[i] + RNY(i) * side * (TW / 2 + 20), 25, 0, TAU); tg.fill(); }
+    for (let i = 0; i < 9000; i++) { const k = r() * NS | 0; if (!GRAV[k]) continue; const side = -Math.sign(KV[k]) || 1, d = TW / 2 + 4 + r() * 40, l = (r() - 0.5) * 12;
+      tg.fillStyle = ro.dot[r() < .5 ? 0 : 1]; tg.fillRect(SX[k] + RNX(k) * side * d + TX[k] * l | 0, SY[k] + RNY(k) * side * d + TY[k] * l | 0, 1, 1); }
+    if (ro.band) for (let i = 0; i < NS; i += 2) if (GRAV[i]) { const side = -Math.sign(KV[i]) || 1;
+      for (const d of [TW / 2 + 9, TW / 2 + 13]) { tg.fillStyle = ro.band; tg.fillRect(SX[i] + RNX(i) * side * d - 1 | 0, SY[i] + RNY(i) * side * d - 1 | 0, 3, 3); } }
+  }
+  // atölye önündeki parke alan
   tg.save(); tg.translate(WS.x, WS.y); tg.rotate(Math.atan2(TY[WS_I], TX[WS_I]));
   tg.fillStyle = '#c4a79a'; tg.fillRect(-70, -50, 140, 70);
   tg.fillStyle = '#b19385'; for (let x = -70; x < 70; x += 6) tg.fillRect(x, -50, 1, 70); for (let y = -50; y < 20; y += 6) tg.fillRect(-70, y, 140, 1);
   tg.fillStyle = '#9b9a92'; tg.fillRect(-60, -10, 120, 30); tg.restore();
   tg.lineJoin = 'round'; tg.lineCap = 'round';
+  if (TH.walls) {   // Monako: kaldırım + bariyer
+    path(); tg.lineWidth = TW + 34; tg.strokeStyle = '#a49d90'; tg.stroke();
+    path(); tg.lineWidth = TW + 16; tg.strokeStyle = '#d9dde1'; tg.stroke();
+    path(); tg.lineWidth = TW + 13; tg.strokeStyle = '#8a9198'; tg.stroke();
+  }
   path(); tg.lineWidth = TW + 10; tg.strokeStyle = '#f2f2f2'; tg.stroke();
   tg.setLineDash([9, 9]); tg.strokeStyle = '#d22f2a'; tg.stroke(); tg.setLineDash([]);
   path(); tg.lineWidth = TW; tg.strokeStyle = '#5d6168'; tg.stroke();
@@ -217,53 +349,101 @@ function buildTexture() {
   tg.restore();
   for (let p = 0; p < 8; p++) { const gp = gridPos(p); tg.save(); tg.translate(gp.x - TX[gp.i] * 4, gp.y - TY[gp.i] * 4); tg.rotate(gp.a);
     tg.fillStyle = '#e9e9e9'; tg.fillRect(4, -5, 1, 10); tg.fillRect(1, -5, 3, 1); tg.fillRect(1, 4, 3, 1); tg.restore(); }
-  // asfaltta logo
   for (const wi of [30 % NS, Math.round(NS * .5)]) { tg.save(); tg.translate(SX[wi], SY[wi]); tg.rotate(Math.atan2(TX[wi], -TY[wi]));
     tg.globalAlpha = .85; tg.drawImage(LOGO.wdW52, -26, -4); tg.globalAlpha = 1; tg.restore(); }
   tex = new Uint32Array(tg.getImageData(0, 0, TS, TS).data.buffer);
   MIPS = TS / 4;
   const [mc, mg] = mk(MIPS, MIPS); mg.imageSmoothingEnabled = true; mg.imageSmoothingQuality = 'high'; mg.drawImage(tc, 0, 0, MIPS, MIPS);
   mip = new Uint32Array(mg.getImageData(0, 0, MIPS, MIPS).data.buffer);
-  OUTCOL = ABGR(0x3e, 0x9a, 0x39); SKID = ABGR(0x3a, 0x3c, 0x41);
+  OUTCOL = ABGR(...TH.out); SKID = ABGR(0x3a, 0x3c, 0x41);
 }
 function buildPano() {
-  const [c, g] = mk(PW, HY + 1); const r = rng(3);
-  const sky = ['#3a78cc', '#4382d1', '#4d8dd6', '#5898db', '#64a3e0', '#71ade4', '#7fb8e8', '#8ec2ec', '#9ecbef', '#acd3f1'];
-  const bh = Math.ceil((HY + 1) / sky.length);
+  const [c, g] = mk(PW, HY + 1); const r = rng(3 + TK.length * 7);
+  const sky = TH.sky, bh = Math.ceil((HY + 1) / sky.length);
   sky.forEach((col, i) => { g.fillStyle = col; g.fillRect(0, i * bh, PW, bh); });
-  for (let k = 0; k < 9; k++) { const cx = r() * PW, cy = 8 + r() * 26, w = 20 + r() * 40;
-    for (let i = 0; i < 22; i++) { g.fillStyle = i % 4 ? '#f4f8fb' : '#dfe9f1'; const a = r() * TAU, d = r(); g.fillRect((cx + Math.cos(a) * w * d * 0.6) % PW | 0, cy + Math.sin(a) * 5 * d | 0, 8, 3); } }
-  for (let x = 0; x < PW; x++) { const a = x / PW * TAU; const h = Math.round(16 + 7 * Math.sin(a * 3) + 5 * Math.sin(a * 7 + 1) + 2 * Math.sin(a * 17));
-    g.fillStyle = '#a99d62'; g.fillRect(x, HY - h, 1, h + 1); g.fillStyle = '#c4b87d'; g.fillRect(x, HY - h, 1, 1); }
-  for (let k = 0; k < 7; k++) { const bx = (200 + k * 190 + r() * 60) % PW, bw = 18 + r() * 26 | 0, bhh = 10 + r() * 14 | 0;
-    if (Math.abs(bx - 640) < 120) continue;
-    g.fillStyle = '#c9d0d6'; g.fillRect(bx, HY - bhh, bw, bhh); g.fillStyle = '#7f95a8';
-    for (let y = HY - bhh + 2; y < HY - 2; y += 3) for (let x = bx + 2; x < bx + bw - 2; x += 3) g.fillRect(x, y, 1, 1); }
+  const cloud = (cx, cy, w, cols) => { for (let i = 0; i < 26; i++) { g.fillStyle = cols[i % cols.length]; const a = r() * TAU, d = r(); g.fillRect((cx + Math.cos(a) * w * d * 0.6) % PW | 0, cy + Math.sin(a) * 5 * d | 0, 8, 3); } };
+  if (TK === 'spa') {
+    for (let k = 0; k < 22; k++) cloud(r() * PW, 4 + r() * 30, 40 + r() * 60, ['#9aa4b1', '#a7b0bc', '#8c97a5', '#b3bbc5']);
+    for (let x = 0; x < PW; x++) { const a = x / PW * TAU; const h = Math.round(24 + 8 * Math.sin(a * 2 + 1) + 5 * Math.sin(a * 5) + 3 * Math.sin(a * 13));
+      g.fillStyle = '#6d8576'; g.fillRect(x, HY - h, 1, h + 1); }
+    for (let x = 0; x < PW; x += 3) { const a = x / PW * TAU; const h = Math.round(15 + 6 * Math.sin(a * 3) + 4 * Math.sin(a * 9 + 2)) + (r() * 4 | 0);
+      g.fillStyle = '#2f5a3e'; g.fillRect(x, HY - h, 3, h + 1); g.fillStyle = '#26503a'; g.fillRect(x + 1, HY - h - 2, 1, 2); }
+    g.fillStyle = 'rgba(200,207,214,.35)'; g.fillRect(0, HY - 12, PW, 12);
+  } else if (TK === 'monaco') {
+    for (let k = 0; k < 7; k++) cloud(r() * PW, 6 + r() * 20, 20 + r() * 30, ['#ffffff', '#eef6fc']);
+    g.fillStyle = '#245f9e'; g.fillRect(0, HY - 9, PW, 10);
+    for (let i = 0; i < 300; i++) { g.fillStyle = r() < .5 ? '#3a78b8' : '#cfe7f8'; g.fillRect(r() * PW | 0, HY - 9 + r() * 9 | 0, 2, 1); }
+    for (const [x0, x1, top] of [[60, 520, 34], [760, 1280, 42], [1360, 1520, 26]]) {
+      for (let x = x0; x < x1; x++) { const t = (x - x0) / (x1 - x0), h = Math.round(top * Math.sin(t * Math.PI) ** 0.7);
+        g.fillStyle = '#7a8a5a'; g.fillRect(x, HY - 9 - h, 1, h); }
+      for (let x = x0 + 4; x < x1 - 8;) { const t = (x - x0) / (x1 - x0), base = HY - 9 - Math.round(top * Math.sin(t * Math.PI) ** 0.7 * 0.6);
+        const w = 6 + (r() * 10 | 0), h = 6 + (r() * 14 | 0);
+        g.fillStyle = ['#efe4cf', '#e8c9a8', '#f6f1e6', '#e2b48f', '#d9c7a3'][r() * 5 | 0]; g.fillRect(x, base - h, w, h + 6);
+        g.fillStyle = '#b55a3a'; g.fillRect(x, base - h, w, 1);
+        g.fillStyle = '#5a6a78'; for (let yy = base - h + 3; yy < base; yy += 3) for (let xx = x + 1; xx < x + w - 1; xx += 2) g.fillRect(xx, yy, 1, 1);
+        x += w + (r() * 3 | 0); }
+    }
+    for (let i = 0; i < 14; i++) { const x = r() * PW | 0; g.fillStyle = '#f4f6f8'; g.fillRect(x, HY - 4, 7, 2); g.fillRect(x + 3, HY - 8, 1, 4); }
+  } else {   // İstanbul
+    for (let k = 0; k < 6; k++) cloud(r() * PW, 8 + r() * 20, 20 + r() * 40, ['#fbe9cf', '#f4dcbc']);
+    for (let x = 0; x < PW; x++) { const a = x / PW * TAU; const h = Math.round(13 + 5 * Math.sin(a * 3) + 3 * Math.sin(a * 7 + 1));
+      g.fillStyle = '#b29a62'; g.fillRect(x, HY - h, 1, h + 1); g.fillStyle = '#c8b27a'; g.fillRect(x, HY - h, 1, 1); }
+    // şehir silüeti: kubbeler ve minareler
+    const sil = '#7b8399';
+    for (let x = 880; x < 1380; x += 2) { const h = 6 + (r() * 8 | 0); g.fillStyle = '#8e95a8'; g.fillRect(x, HY - 10 - h, 2, h); }
+    const mosque = (cx, s) => {
+      g.fillStyle = sil; g.fillRect(cx - 14 * s, HY - 18 * s, 28 * s, 8 * s);
+      g.beginPath(); g.arc(cx, HY - 18 * s, 10 * s, Math.PI, TAU); g.fill();
+      for (const dx of [-10, 10]) { g.beginPath(); g.arc(cx + dx * s, HY - 17 * s, 4 * s, Math.PI, TAU); g.fill(); }
+      g.fillRect(cx - 0.5, HY - 31 * s, 1, 4 * s);
+      for (const dx of [-20, 20, -26, 26]) { g.fillRect(cx + dx * s - 1, HY - 38 * s, 2, 28 * s); g.beginPath(); g.moveTo(cx + dx * s - 1.5, HY - 38 * s); g.lineTo(cx + dx * s, HY - 44 * s); g.lineTo(cx + dx * s + 1.5, HY - 38 * s); g.fill(); }
+    };
+    mosque(1000, 1); mosque(1180, 0.8); mosque(1300, 0.65);
+    g.fillStyle = sil; g.fillRect(1090, HY - 34, 5, 24); g.beginPath(); g.moveTo(1088, HY - 34); g.lineTo(1092.5, HY - 41); g.lineTo(1097, HY - 34); g.fill();   // Galata
+    for (let x = 0; x < PW; x += 9 + (r() * 9 | 0)) { if ((x > 560 && x < 720) || (x > 860 && x < 1400)) continue; const h = 7 + r() * 9 | 0;
+      g.fillStyle = '#4c6a3a'; g.fillRect(x, HY - h, 2, h); g.fillRect(x - 1, HY - h + 2, 4, h - 4); }
+  }
   g.imageSmoothingEnabled = true; g.drawImage(workshop, 640 - 72, HY - 72, 144, 75); g.imageSmoothingEnabled = false;
-  for (let x = 0; x < PW; x += 5 + (r() * 6 | 0)) { if (x > 560 && x < 720) continue; const h = 6 + r() * 12 | 0, w = Math.ceil(h * 0.3);
-    for (let y = 0; y < h; y++) { const ww = Math.round(y / h * w); g.fillStyle = '#1d5534'; g.fillRect(x - ww, HY - h + y + 1, ww * 2 + 1, 1); } }
+  if (TK !== 'monaco') for (let x = 0; x < PW; x += 5 + (r() * 6 | 0)) { if (x > 560 && x < 720) continue; if (TK === 'istanbul' && x > 860 && x < 1400) continue;
+    const h = 6 + r() * (TK === 'spa' ? 16 : 10) | 0, w = Math.ceil(h * 0.3);
+    for (let y = 0; y < h; y++) { const ww = Math.round(y / h * w); g.fillStyle = TK === 'spa' ? '#173f27' : '#3d5a2e'; g.fillRect(x - ww, HY - h + y + 1, ww * 2 + 1, 1); } }
   pano = c;
 }
 function addObj(o) { objs.push(o); if (o.r) { const k = (o.x / GC | 0) + ',' + (o.y / GC | 0); if (!grid.has(k)) grid.set(k, []); grid.get(k).push(o); } }
 function buildObjects() {
-  const r = rng(21);
-  const farFromTrack = (x, y, m) => { for (let i = 0; i < NS; i += 3) { const d = sq(x - SX[i]) + sq(y - SY[i]); const lim = TW / 2 + m + (GRAV[i] ? 46 : 0); if (d < lim * lim) return false; } return true; };
-  for (let t = 0; t < 900 && objs.length < 260; t++) {
-    const x = 60 + r() * (TS - 120), y = 60 + r() * (TS - 120);
-    if (Math.hypot(x - WS.x, y - WS.y) < 110 || Math.hypot(x - STAND.x, y - STAND.y) < 70) continue;
-    if (!farFromTrack(x, y, 26)) continue;
-    const k = r(); addObj(k < 0.45 ? { x, y, img: imgPine, ww: 24, r: 4 } : k < 0.75 ? { x, y, img: imgPine2, ww: 20, r: 4 } : { x, y, img: imgAutumn, ww: 28, r: 4 });
+  objs.length = 0; grid.clear(); pickups.length = 0;
+  const r = rng(21 + TK.length * 13);
+  const farFromTrack = (x, y, m) => { for (let i = 0; i < NS; i += 3) { const d = sq(x - SX[i]) + sq(y - SY[i]); const lim = TW / 2 + m + (GRAV[i] && TH.runoff ? 46 : 0); if (d < lim * lim) return false; } return true; };
+  const awayFromBuildings = (x, y) => Math.hypot(x - WS.x, y - WS.y) > 110 && Math.hypot(x - STAND.x, y - STAND.y) > 70;
+  if (TK === 'monaco') {
+    for (let i = 0; i < NS; i += 6) for (const side of [-1, 1]) {
+      const d = TW / 2 + 28 + r() * 10, x = SX[i] + RNX(i) * side * d, y = SY[i] + RNY(i) * side * d;
+      if (y > 1570 || !awayFromBuildings(x, y) || !farFromTrack(x, y, 22)) continue;
+      if (r() < 0.22) addObj({ x, y, img: imgPalm, ww: 22, r: 0 });
+      else addObj({ x, y, img: BUILDINGS[r() * BUILDINGS.length | 0], ww: 30 + r() * 12, r: 0 });
+    }
+    for (let i = 0; i < 40; i++) addObj({ x: 60 + r() * (TS - 120), y: 1660 + r() * 330, img: imgYacht, ww: 26 + r() * 10, r: 0 });
+  } else {
+    const n = TK === 'spa' ? 420 : 170;
+    for (let t = 0; t < 2400 && objs.length < n; t++) {
+      const x = 60 + r() * (TS - 120), y = 60 + r() * (TS - 120);
+      if (!awayFromBuildings(x, y) || !farFromTrack(x, y, 26)) continue;
+      const k = r();
+      if (TK === 'spa') addObj(k < 0.6 ? { x, y, img: imgDarkPine, ww: 26, r: 4 } : k < 0.9 ? { x, y, img: imgPine, ww: 24, r: 4 } : { x, y, img: imgPine2, ww: 20, r: 4 });
+      else addObj(k < 0.45 ? { x, y, img: imgCypress, ww: 12, r: 3 } : k < 0.8 ? { x, y, img: imgPoplar, ww: 14, r: 3 } : { x, y, img: imgAutumn, ww: 24, r: 4 });
+    }
+    for (let i = 0; i < NS; i += 7) if (GRAV[i] && GRAV[(i + 7) % NS]) { const side = -Math.sign(KV[i]) || 1, d = TW / 2 + 47;
+      addObj({ x: SX[i] + RNX(i) * side * d, y: SY[i] + RNY(i) * side * d, img: imgTires, ww: 9, r: 4 }); }
   }
-  for (let i = 0; i < NS; i += 7) if (GRAV[i] && GRAV[(i + 7) % NS]) { const side = -Math.sign(KV[i]) || 1, d = TW / 2 + 47;
-    addObj({ x: SX[i] + RNX(i) * side * d, y: SY[i] + RNY(i) * side * d, img: imgTires, ww: 9, r: 4 }); }
-  for (let i = 40; i < NS; i += Math.floor(NS / 9)) { const side = (i / 7 | 0) % 2 ? 1 : -1; const d = TW / 2 + 16;
-    if (GRAV[i] && side === -Math.sign(KV[i])) continue;
-    addObj({ x: SX[i] + RNX(i) * side * d, y: SY[i] + RNY(i) * side * d, img: imgBanner, ww: 30, r: 3 }); }
+  for (let i = 40; i < NS; i += Math.floor(NS / 10)) { const side = (i / 7 | 0) % 2 ? 1 : -1; const d = TW / 2 + (TH.walls ? 9 : 16);
+    if (GRAV[i] && TH.runoff && side === -Math.sign(KV[i])) continue;
+    const x = SX[i] + RNX(i) * side * d, y = SY[i] + RNY(i) * side * d; if (TH.walls && y > 1570) continue;
+    addObj({ x, y, img: imgBanner, ww: 30, r: TH.walls ? 0 : 3 }); }
   addObj({ x: WS.x, y: WS.y, img: workshop, ww: 96, r: 34 });
   addObj({ x: STAND.x, y: STAND.y, img: imgStand, ww: 80, r: 26 });
   addObj({ x: SX[0], y: SY[0], img: imgGantry, ww: TW + 16 });
-  for (let k = 0; k < 9; k++) { const i = Math.floor((k + 0.4) * NS / 9) % NS, lat = ((k * 37) % 7 / 6 - 0.5) * TW * 0.6;
-    pickups.push({ x: SX[i] + RNX(i) * lat, y: SY[i] + RNY(i) * lat, on: true, t: 0 }); }
+  for (let k = 0; k < 12; k++) { const i = Math.floor((k + 0.4) * NS / 12) % NS, lat = ((k * 37) % 7 / 6 - 0.5) * TW * 0.6;
+    pickups.push({ x: SX[i] + RNX(i) * lat, y: SY[i] + RNY(i) * lat, tk: new Map() }); }
   let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (let i = 0; i < NS; i++) { x0 = Math.min(x0, SX[i]); y0 = Math.min(y0, SY[i]); x1 = Math.max(x1, SX[i]); y1 = Math.max(y1, SY[i]); }
   const s = (MM - 10) / Math.max(x1 - x0, y1 - y0); mmScale = { s, x0: x0 - (MM / s - (x1 - x0)) / 2, y0: y0 - (MM / s - (y1 - y0)) / 2 };
   const [c, g] = mk(MM, MM); g.fillStyle = 'rgba(6,18,30,.78)'; g.fillRect(0, 0, MM, MM);
@@ -271,6 +451,32 @@ function buildObjects() {
   for (let i = 0; i <= NS; i += 4) { const k = i % NS; const x = (SX[k] - mmScale.x0) * mmScale.s, y = (SY[k] - mmScale.y0) * mmScale.s; i ? g.lineTo(x, y) : g.moveTo(x, y); }
   g.closePath(); g.stroke(); const sx = (SX[0] - mmScale.x0) * mmScale.s, sy = (SY[0] - mmScale.y0) * mmScale.s; g.fillStyle = '#ffd84a'; g.fillRect(sx - 1, sy - 2, 2, 4);
   minimap = c;
+  boxes.length = 0; obst.length = 0; haz.length = 0;
+}
+// yarış başında: eşya kutuları ve engeller (tohum herkes için aynı)
+function placeRaceItems(cfg, seed) {
+  boxes.length = 0; obst.length = 0; haz.length = 0;
+  for (const p of pickups) p.tk.clear();
+  const rows = [0, 5, 9][cfg.items | 0] || 0;
+  const rowIdx = [];
+  for (let k = 0; k < rows; k++) {
+    const i = Math.floor((k + 0.7) * NS / rows) % NS; rowIdx.push(i);
+    for (const f of [-0.36, -0.12, 0.12, 0.36]) boxes.push({ x: SX[i] + RNX(i) * f * TW, y: SY[i] + RNY(i) * f * TW, tk: new Map(), ph: Math.random() * 6 });
+  }
+  const r = rng((seed | 0) % 2147483646 + 1);
+  let n = [0, 10, 18, 30][cfg.obst | 0] || 0; if (TH.walls) n = Math.round(n * 0.6);
+  for (let k = 0, guard = 0; k < n && guard < 500; guard++) {
+    const i = Math.floor(r() * NS);
+    if (i < 40 || i > NS - 25) continue;
+    if (rowIdx.some(ri => Math.abs(ri - i) < 8)) continue;
+    if (obst.some(o => Math.abs(o.i - i) < 10)) continue;
+    const t = r(), lat = (r() - 0.5) * (TW - 20);
+    const at = l => ({ x: SX[i] + RNX(i) * l, y: SY[i] + RNY(i) * l });
+    if (t < 0.45) { for (const dl of [-6, 0, 6]) obst.push({ i, k: 'cone', ...at(clamp(lat + dl, -TW / 2 + 5, TW / 2 - 5)), tk: new Map() }); }
+    else if (t < 0.72) obst.push({ i, k: 'barrel', ...at(lat), r: 3.5 });
+    else obst.push({ i, k: 'oil', ...at(lat) });
+    k++;
+  }
 }
 function buildCars() {
   for (const c of CARS) {
@@ -287,22 +493,25 @@ function buildCars() {
 /* =========================================================
    FİZİK
    ========================================================= */
-const SURF = { road: { top: 1, drag: 0.15, grip: 1 }, curb: { top: 0.96, drag: 0.22, grip: 0.92 }, grass: { top: 0.55, drag: 1.0, grip: 0.68 }, gravel: { top: 0.38, drag: 2.2, grip: 0.5 } };
-const SURFS = ['road', 'curb', 'grass', 'gravel'];
+const SURF = { road: { top: 1, drag: 0.15, grip: 1 }, curb: { top: 0.96, drag: 0.22, grip: 0.92 }, grass: { top: 0.55, drag: 1.0, grip: 0.68 },
+  gravel: { top: 0.38, drag: 2.2, grip: 0.5 }, runoff: { top: 0.9, drag: 0.32, grip: 0.9 }, wall: { top: 0.9, drag: 0.4, grip: 0.9 } };
+const SURFS = ['road', 'curb', 'grass', 'gravel', 'runoff', 'wall'];
 const statsOf = s => ({ top: 230 + 90 * s.top, acc: 110 + 130 * s.acc, turn: 2.1 + 1.3 * s.turn, grip: 4.5 + 7 * s.grip });
 function makeCar(def, slot, kind) {
   const gp = gridPos(slot);
   return { def, kind, stats: statsOf(def.s), x: gp.x, y: gp.y, a: gp.a, vx: 0, vy: 0, av: 0, idx: gp.i, lap: -1, maxLap: -1, lapStart: 0, laps: [], bestLap: 0,
     finished: false, fin: 0, total: 0, turbo: 25, turboOn: false, lane: (Math.random() - 0.5) * 0.4, laneT: 1 + Math.random() * 2, surf: 'road', slip: 0,
-    skill: 0.96 + Math.random() * 0.05, hitT: 0, buf: [], vf: 0, f: gp.i / NS, name: def.name, id: 0, seen: 0 };
+    skill: 0.96 + Math.random() * 0.05, hitT: 0, buf: [], vf: 0, f: gp.i / NS, name: def.name, id: 0, seen: 0,
+    item: null, itemT: 0, boostT: 0, shieldT: 0, spinT: 0, spinDir: 1, zapT: 0, flags: 0 };
 }
 const speedF = c => c.kind === 'remote' ? c.vf : c.vx * Math.cos(c.a) + c.vy * Math.sin(c.a);
 function stepCar(c, inp, dt) {
   const st = c.stats, fx = Math.cos(c.a), fy = Math.sin(c.a), rxv = -fy, ryv = fx;
   let vf = c.vx * fx + c.vy * fy, vl = c.vx * rxv + c.vy * ryv;
-  const sf = SURF[c.surf];
+  const sf = SURF[c.surf] || SURF.road;
   let top = st.top * sf.top, acc = st.acc;
   if (c.turboOn) { top *= 1.35; acc *= 1.8; }
+  if (c.zapT > 0) { top *= 0.55; acc *= 0.6; }
   if (inp.thr > 0.05) { if (vf < top) vf += acc * inp.thr * dt * (1 - Math.max(0, vf) / top * 0.6); }
   else if (inp.thr < -0.05) { if (vf > 8) vf -= 280 * -inp.thr * dt; else vf = Math.max(-70, vf - 100 * -inp.thr * dt); }
   vf -= vf * sf.drag * dt + Math.sign(vf) * Math.min(Math.abs(vf), 14 * dt);
@@ -310,8 +519,10 @@ function stepCar(c, inp, dt) {
   const spd = Math.abs(vf);
   const steerEff = Math.min(1, spd / 45) * (1 - 0.32 * Math.min(1, spd / st.top));
   c.av = inp.steer * st.turn * steerEff * (vf < -2 ? -1 : 1);
+  if (c.spinT > 0) c.av = c.spinDir * 9;
   c.a = wrapA(c.a + c.av * dt);
-  const grip = st.grip * sf.grip * (c.turboOn ? 0.85 : 1) * (inp.thr > 0.5 && Math.abs(inp.steer) > 0.6 && spd > st.top * 0.7 ? 0.6 : 1);
+  let grip = st.grip * sf.grip * (c.turboOn ? 0.85 : 1) * (inp.thr > 0.5 && Math.abs(inp.steer) > 0.6 && spd > st.top * 0.7 ? 0.6 : 1);
+  if (c.spinT > 0) grip *= 0.25;
   vl *= Math.exp(-grip * dt);
   c.vx = fx * vf + rxv * vl; c.vy = fy * vf + ryv * vl;
   c.x += c.vx * dt; c.y += c.vy * dt;
@@ -329,9 +540,19 @@ function trackUpdate(c, laps) {
   let n = nearest(c, false);
   if (n.d2 > 220 * 220) n = nearest(c, true);
   const prev = c.idx; c.idx = n.i; c.f = c.idx / NS;
-  const lat = (c.x - SX[c.idx]) * RNX(c.idx) + (c.y - SY[c.idx]) * RNY(c.idx);
-  const d = Math.abs(lat);
-  c.surf = d < TW / 2 ? 'road' : d < TW / 2 + 5 ? 'curb' : (GRAV[c.idx] && Math.sign(lat) === -Math.sign(KV[c.idx]) && d < TW / 2 + 44) ? 'gravel' : 'grass';
+  let lat = (c.x - SX[c.idx]) * RNX(c.idx) + (c.y - SY[c.idx]) * RNY(c.idx);
+  let d = Math.abs(lat);
+  if (TH.walls && d > TW / 2 + 5) {     // Monako bariyeri
+    const s = Math.sign(lat), lim = TW / 2 + 5, nx = RNX(c.idx) * s, ny = RNY(c.idx) * s;
+    c.x -= nx * (d - lim); c.y -= ny * (d - lim);
+    const vn = c.vx * nx + c.vy * ny;
+    if (vn > 0) { c.vx -= nx * vn * 1.3; c.vy -= ny * vn * 1.3; c.vx *= 0.82; c.vy *= 0.82;
+      if (c === me && vn > 40 && c.hitT <= 0) { shake = 0.25; sfx('bump'); c.hitT = 0.3; for (let k = 0; k < 4; k++) particles.push({ x: c.x + nx * 4, y: c.y + ny * 4, life: 0.35, max: 0.35, col: '#ffd84a' }); } }
+    lat = s * lim; d = lim;
+  }
+  c.surf = d < TW / 2 ? 'road' : d < TW / 2 + 5 ? 'curb'
+    : TH.walls ? 'wall'
+    : (TH.runoff && GRAV[c.idx] && Math.sign(lat) === -Math.sign(KV[c.idx]) && d < TW / 2 + 44) ? TH.runoff.surf : 'grass';
   if (!laps) return;
   const diff = c.idx - prev;
   if (diff < -NS / 2) { c.lap++; if (c.lap > c.maxLap) { c.maxLap = c.lap; onCross(c); } }
@@ -351,7 +572,7 @@ function aiDrive(c, dt, ref) {
   return { steer: clamp(diff * 3, -1, 1), thr: vf < target ? 1 : vf > target * 1.08 ? -0.6 : 0.15, turbo: c.turbo > 50 && km < 0.003 && vf > target * 0.8 };
 }
 function collide(list) {
-  for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) {
+  if (race.collide) for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) {
     const a = list[i], b = list[j];
     if (a.kind === 'remote' && b.kind === 'remote') continue;
     const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy), m = 10;
@@ -370,14 +591,14 @@ function collide(list) {
   }
   for (const c of list) {
     if (c.kind === 'remote') continue;
+    const solids = [];
     const gx = c.x / GC | 0, gy = c.y / GC | 0;
-    for (let ox = -1; ox <= 1; ox++) for (let oy = -1; oy <= 1; oy++) {
-      const l = grid.get((gx + ox) + ',' + (gy + oy)); if (!l) continue;
-      for (const o of l) { const dx = c.x - o.x, dy = c.y - o.y, d = Math.hypot(dx, dy), m = o.r + 4;
-        if (d < m && d > 0) { c.x = o.x + dx / d * m; c.y = o.y + dy / d * m; const vn = c.vx * dx / d + c.vy * dy / d;
-          if (vn < 0) { c.vx -= dx / d * vn * 1.4; c.vy -= dy / d * vn * 1.4; c.vx *= 0.55; c.vy *= 0.55;
-            if (c === me && c.hitT <= 0) { shake = 0.3; sfx('crash'); c.hitT = 0.4; } } } }
-    }
+    for (let ox = -1; ox <= 1; ox++) for (let oy = -1; oy <= 1; oy++) { const l = grid.get((gx + ox) + ',' + (gy + oy)); if (l) solids.push(...l); }
+    for (const o of obst) if (o.k === 'barrel' && Math.abs(o.x - c.x) < 20 && Math.abs(o.y - c.y) < 20) solids.push(o);
+    for (const o of solids) { const dx = c.x - o.x, dy = c.y - o.y, d = Math.hypot(dx, dy), m = o.r + 4;
+      if (d < m && d > 0) { c.x = o.x + dx / d * m; c.y = o.y + dy / d * m; const vn = c.vx * dx / d + c.vy * dy / d;
+        if (vn < 0) { c.vx -= dx / d * vn * 1.4; c.vy -= dy / d * vn * 1.4; const k = c.shieldT > 0 ? 0.85 : 0.55; c.vx *= k; c.vy *= k;
+          if (c === me && c.hitT <= 0) { shake = 0.3; sfx('crash'); c.hitT = 0.4; } } } }
   }
 }
 
@@ -389,26 +610,32 @@ let state = 'boot', mode = null, prevState = 'race';
 let cars = [], me = null, demo = null;
 const spec = new Map();          // izlenen (izleyici modunda) uzak araçlar
 let countT = 0, raceT = 0, finishT = 0, finishOrder = 0, graceEnd = 0, lastLight = -1, results = null;
-let camA = 0, camX = 0, camY = 0, shake = 0, gT = 0, msg = '', msgT = 0, msgCol = '#ffd84a';
+let camA = 0, camX = 0, camY = 0, shake = 0, gT = 0, msg = '', msgT = 0, msgCol = '#ffd84a', zapFlash = 0, hazSeq = 0;
 const particles = [], feed = [];
-let myId = 0, room = null, board = { laps: [], races: [] }, sendT = 0;
+let myId = 0, room = null, board = { tracks: {} }, sendT = 0;
+const CFG_DEF = { track: 'istanbul', laps: 3, items: 1, obst: 1, catchup: 1, collide: 1 };
+let pcfg = Object.assign({}, CFG_DEF, store.get('hgp-pcfg', {}));
+let race = Object.assign({ seed: 1 }, CFG_DEF);
 
 function flash(t, col = '#ffd84a') { msg = t; msgT = 2.2; msgCol = col; }
 function pushFeed(t, col = '#e6eef5') { feed.push({ t, col, life: 5 }); if (feed.length > 4) feed.shift(); }
 function playerName() { return ($('name').value || '').trim().slice(0, 14); }
+const pickTrack = k => k === 'random' ? TRACK_KEYS[Math.random() * 3 | 0] : (TRACKS[k] ? k : 'istanbul');
 
-function resetPickups() { pickups.forEach(p => { p.on = true; p.t = 0; }); }
 function startPractice() {
   initAudio(); mode = 'practice';
+  race = Object.assign({}, pcfg, { track: pickTrack(pcfg.track), seed: (Math.random() * 1e9) | 0 });
+  useTrack(race.track);
   const others = CARS.filter(c => c.key !== selCar);
   cars = others.map((def, i) => makeCar(def, i, 'ai'));
   me = makeCar(CARK[selCar], 3, 'me'); me.name = playerName() || 'SEN';
   cars.push(me);
-  me.bestStored = store.get('hgp-best-' + selCar, 0);
+  me.bestStored = store.get('hgp-best-' + race.track + '-' + selCar, 0);
   beginCount();
 }
 function beginCount() {
-  resetPickups(); particles.length = 0; finishOrder = 0; raceT = 0; countT = 0; graceEnd = 0; msg = ''; msgT = 0; results = null; feed.length = 0;
+  placeRaceItems(race, race.seed);
+  particles.length = 0; finishOrder = 0; raceT = 0; countT = 0; graceEnd = 0; msg = ''; msgT = 0; results = null; feed.length = 0;
   camA = me.a; state = 'count'; lastLight = -1; showScreen(null);
 }
 function enterOnlineRace(gridIds) {
@@ -432,14 +659,14 @@ function onCross(c) {
     if (!c.bestLap || lt < c.bestLap) c.bestLap = lt;
     if (c === me) {
       if (mode === 'online') send({ type: 'lap', n: c.lap, time: +lt.toFixed(3), total: +raceT.toFixed(3) });
-      else if (!me.bestStored || lt < me.bestStored) { me.bestStored = lt; store.set('hgp-best-' + selCar, lt); flash('REKOR TUR!'); }
+      else if (!me.bestStored || lt < me.bestStored) { me.bestStored = lt; store.set('hgp-best-' + race.track + '-' + selCar, lt); flash('REKOR TUR!'); }
       flash('TUR ' + c.lap + '  ' + fmt2(lt), '#ffffff');
       sfx('lap');
     }
   }
   c.lapStart = raceT;
-  if (c === me && c.lap === LAPS - 1) setTimeout(() => flash('SON TUR!'), 900);
-  if (mode === 'practice' && c.lap >= LAPS && !c.finished) {
+  if (c === me && c.lap === race.laps - 1) setTimeout(() => flash('SON TUR!'), 900);
+  if (mode === 'practice' && c.lap >= race.laps && !c.finished) {
     c.finished = true; c.fin = ++finishOrder; c.total = raceT;
     if (c === me) { state = 'finish'; finishT = 0; sfx('go'); }
   }
@@ -448,11 +675,89 @@ function standings() {
   return [...cars].sort((a, b) => (b.finished - a.finished) || (a.finished ? a.total - b.total : progOf(b) - progOf(a)));
 }
 
+/* ---------------- eşyalar ---------------- */
+const ITEM_NAMES = { turbo: 'TURBO', super: 'SÜPER TURBO', oil: 'YAĞ LEKESİ', shield: 'KALKAN', zap: 'ŞİMŞEK' };
+function rollItem(c) {
+  const st = standings(), n = st.length, r = st.indexOf(c), f = n > 1 ? r / (n - 1) : 0.5;
+  const w = race.catchup ? { turbo: 40 - 25 * f, super: 4 + 36 * f, oil: 28 - 22 * f, shield: 14, zap: f > 0.25 ? 26 * f : 0 }
+                         : { turbo: 32, super: 10, oil: 24, shield: 16, zap: 10 };
+  if (n < 2) w.zap = 0;
+  let sum = 0; for (const k in w) sum += w[k];
+  let x = Math.random() * sum;
+  for (const k in w) { x -= w[k]; if (x <= 0) return k; }
+  return 'turbo';
+}
+function useItem(c) {
+  const it = c.item; if (!it || state !== 'race' || c.finished) return; c.item = null;
+  if (it === 'turbo') c.turbo = Math.min(100, c.turbo + 50);
+  else if (it === 'super') { c.turbo = 100; c.boostT = 1.8; }
+  else if (it === 'shield') c.shieldT = 6;
+  else if (it === 'oil') {
+    const x = c.x - Math.cos(c.a) * 13, y = c.y - Math.sin(c.a) * 13;
+    if (mode === 'online' && c === me) send({ type: 'drop', x: +x.toFixed(1), y: +y.toFixed(1) });
+    else haz.push({ id: 'L' + (++hazSeq), x, y, owner: c, t0: performance.now() });
+  } else if (it === 'zap') {
+    const p = progOf(c);
+    if (mode === 'online' && c === me) send({ type: 'zap', p: +p.toFixed(4) }); else applyZap(c, p);
+    zapFlash = 0.25; sfx('zap');
+  }
+  if (c === me) { flash(ITEM_NAMES[it] + '!', '#3fd0f0'); if (it !== 'zap') sfx('pick'); }
+}
+function applyZap(from, p, name) {
+  for (const c of cars) {
+    if (c === from || c.kind === 'remote' || c.finished) continue;
+    if (progOf(c) > p) {
+      if (c.shieldT > 0) { if (c === me) flash('KALKAN KORUDU', '#3fd0f0'); continue; }
+      c.zapT = 2.6; if (c === me) { flash('ŞİMŞEK ÇARPTI!' + (name ? ' (' + name + ')' : ''), '#ffd84a'); shake = 0.3; }
+    }
+  }
+  zapFlash = 0.25;
+}
+function spinOut(c) {
+  if (c.shieldT > 0) { if (c === me) flash('KALKAN KORUDU', '#3fd0f0'); return; }
+  c.spinT = 0.9; c.spinDir = Math.random() < .5 ? -1 : 1; c.vx *= 0.55; c.vy *= 0.55;
+  if (c === me) { flash('KAYDIN!', '#ff6a5e'); shake = 0.3; sfx('crash'); }
+}
+function removeHaz(id) { const i = haz.findIndex(h => h.id === id); if (i >= 0) haz.splice(i, 1); }
+function interact(c, now) {
+  for (const p of pickups) {
+    if (p.tk.get(c) > now || sq(c.x - p.x) + sq(c.y - p.y) > 100) continue;
+    p.tk.set(c, now + 4000); c.turbo = Math.min(100, c.turbo + 45);
+    if (c === me) { sfx('pick'); flash('+H2 TURBO', '#3fd0f0'); }
+  }
+  for (const b of boxes) {
+    if (b.tk.get(c) > now || sq(c.x - b.x) + sq(c.y - b.y) > 64) continue;
+    b.tk.set(c, now + 2200);
+    for (let k = 0; k < 6; k++) particles.push({ x: b.x, y: b.y, life: 0.4, max: 0.4, col: k % 2 ? '#79c8f2' : '#ffffff' });
+    if (!c.item) { c.item = rollItem(c); c.itemT = 1 + Math.random() * 3; if (c === me) { sfx('box'); flash('EŞYA: ' + ITEM_NAMES[c.item], '#ffffff'); } }
+  }
+  for (const o of obst) {
+    const d2 = sq(c.x - o.x) + sq(c.y - o.y);
+    if (o.k === 'cone') {
+      if (d2 > 36 || o.tk.get(c) > now) continue;
+      o.tk.set(c, now + 12000);
+      if (c.shieldT <= 0) { c.vx *= 0.6; c.vy *= 0.6; }
+      for (let k = 0; k < 5; k++) particles.push({ x: o.x, y: o.y, life: 0.5, max: 0.5, col: k % 2 ? '#ff7a1a' : '#ffffff' });
+      if (c === me) { shake = 0.2; sfx('bump'); }
+    } else if (o.k === 'oil') {
+      if (d2 > 40 || (c.oilT || 0) > now) continue;
+      c.oilT = now + 1500; spinOut(c);
+    }
+  }
+  for (let i = haz.length - 1; i >= 0; i--) {
+    const h = haz[i];
+    if (sq(c.x - h.x) + sq(c.y - h.y) > 49) continue;
+    if ((h.owner === c || (c.id && h.owner === c.id)) && now - h.t0 < 2000) continue;
+    spinOut(c); haz.splice(i, 1);
+    if (mode === 'online' && c === me) send({ type: 'hazHit', id: h.id });
+  }
+}
+
 /* ---------------- uzak araçların yumuşatılması ---------------- */
 const INTERP = 110;
 function pushRemote(c, d, now) {
-  // d: [x, y, a, vf, turbo, f, surf, lapLocal, serverLap, fin]
-  c.buf.push({ t: now, x: d[0], y: d[1], a: d[2], v: d[3], tb: d[4], f: d[5], s: d[6], lap: d[7] });
+  // d: [x, y, a, vf, flags, f, surf, lapLocal, serverLap, fin]
+  c.buf.push({ t: now, x: d[0], y: d[1], a: d[2], v: d[3], fl: d[4] | 0, f: d[5], s: d[6], lap: d[7] });
   if (c.buf.length > 30) c.buf.shift();
   c.seen = now;
 }
@@ -463,9 +768,10 @@ function updRemote(c, now) {
   const s0 = b[0], s1 = b[1] || b[0];
   const t = s1.t > s0.t ? clamp((rt - s0.t) / (s1.t - s0.t), 0, 1.6) : 0;
   c.x = s0.x + (s1.x - s0.x) * t; c.y = s0.y + (s1.y - s0.y) * t; c.a = wrapA(s0.a + wrapA(s1.a - s0.a) * t);
-  c.vf = s1.v; c.turboOn = !!s1.tb; c.f = s1.f; c.surf = SURFS[s1.s | 0] || 'road'; c.lap = s1.lap;
+  c.vf = s1.v; c.flags = s1.fl; c.turboOn = !!(s1.fl & 1); c.f = s1.f; c.surf = SURFS[s1.s | 0] || 'road'; c.lap = s1.lap;
   c.idx = clamp(Math.round(c.f * NS), 0, NS - 1);
 }
+const flagsOf = c => (c.turboOn ? 1 : 0) | (c.shieldT > 0 ? 2 : 0) | (c.spinT > 0 ? 4 : 0) | (c.zapT > 0 ? 8 : 0);
 
 /* ---------------- ana güncelleme ---------------- */
 function update(dt) {
@@ -473,6 +779,7 @@ function update(dt) {
   const now = performance.now();
   joyMenuNav();
   for (const f of feed) f.life -= dt; while (feed.length && feed[0].life <= 0) feed.shift();
+  zapFlash = Math.max(0, zapFlash - dt);
   if (state === 'boot') return;
   if (state === 'menu' || state === 'room') { updateAttract(dt, now); updateEngine(); return; }
   if (state === 'paused') return;
@@ -487,37 +794,40 @@ function update(dt) {
     if (c.kind === 'remote') { updRemote(c, now); continue; }
     let inp = { steer: 0, thr: 0, turbo: false };
     if (racing) inp = (c.kind === 'ai' || c.finished || BOT) ? aiDrive(c, dt, me) : readInput();
-    c.turboOn = !!inp.turbo && c.turbo > 0 && speedF(c) > 20;
-    if (c.turboOn) { c.turbo = Math.max(0, c.turbo - 30 * dt); if (c === me && !me.wasTurbo) sfx('turbo'); }
+    for (const k of ['boostT', 'shieldT', 'spinT', 'zapT']) if (c[k] > 0) c[k] = Math.max(0, c[k] - dt);
+    if (c.spinT > 0) inp = { steer: 0, thr: 0, turbo: false };
+    c.turboOn = c.boostT > 0 || (!!inp.turbo && c.turbo > 0 && speedF(c) > 20);
+    if (c.turboOn && c.boostT <= 0) { c.turbo = Math.max(0, c.turbo - 30 * dt); }
+    if (c === me && c.turboOn && !me.wasTurbo) sfx('turbo');
     if (c === me) me.wasTurbo = c.turboOn;
+    if (racing && c.item && (c.kind === 'ai' || BOT)) { c.itemT -= dt; if (c.itemT <= 0 && state === 'race') useItem(c); }
     stepCar(c, inp, dt);
     trackUpdate(c, true);
+    if (state === 'race' || state === 'finish') interact(c, now);
     c.hitT -= dt;
     const sp = Math.abs(speedF(c));
     if ((c.slip > 38 && (c.surf === 'road' || c.surf === 'curb')) || (sp > 60 && (c.surf === 'grass' || c.surf === 'gravel'))) {
       const fx = Math.cos(c.a), fy = Math.sin(c.a), bx = c.x - fx * 6, by = c.y - fy * 6;
       if (Math.random() < 0.6) particles.push({ x: bx + (Math.random() - .5) * 6, y: by + (Math.random() - .5) * 6, life: 0.7, max: 0.7,
-        col: c.surf === 'gravel' ? '#d8c690' : c.surf === 'grass' ? '#6b8f3a' : '#d9dde2' });
+        col: c.surf === 'gravel' ? '#d8c690' : c.surf === 'grass' ? (TK === 'istanbul' ? '#a8984a' : '#6b8f3a') : '#d9dde2' });
       if (c.surf === 'road' && c.slip > 38) for (const s of [-3, 3]) { const px = bx + -fy * s | 0, py = by + fx * s | 0; if (px > 0 && py > 0 && px < TS && py < TS) tex[py * TS + px] = SKID; }
     }
   }
-  for (const c of cars) if (c.turboOn && Math.random() < 0.5) particles.push({ x: c.x - Math.cos(c.a) * 9, y: c.y - Math.sin(c.a) * 9, life: 0.3, max: 0.3, col: '#ffb03b' });
-  collide(cars);
-  for (const p of pickups) {
-    if (!p.on) { p.t -= dt; if (p.t <= 0) p.on = true; continue; }
-    for (const c of cars) if (sq(c.x - p.x) + sq(c.y - p.y) < 100) {
-      p.on = false; p.t = 7;
-      if (c.kind !== 'remote') { c.turbo = Math.min(100, c.turbo + 45); if (c === me) { sfx('pick'); flash('+H2 TURBO', '#3fd0f0'); } }
-      break;
-    }
+  for (const c of cars) {
+    const tb = c.kind === 'remote' ? !!(c.flags & 1) : c.turboOn;
+    if (tb && Math.random() < 0.5) particles.push({ x: c.x - Math.cos(c.a) * 9, y: c.y - Math.sin(c.a) * 9, life: 0.3, max: 0.3, col: '#ffb03b' });
+    const zp = c.kind === 'remote' ? !!(c.flags & 8) : c.zapT > 0;
+    if (zp && Math.random() < 0.5) particles.push({ x: c.x + (Math.random() - .5) * 8, y: c.y + (Math.random() - .5) * 8, life: 0.25, max: 0.25, col: '#ffd84a' });
   }
+  collide(cars);
+  for (let i = haz.length - 1; i >= 0; i--) if (now - haz[i].t0 > 30000) haz.splice(i, 1);
   stepParticles(dt);
   if (racing) raceT = mode === 'online' ? (now - goAt) / 1000 : raceT + dt;
   if (state === 'finish') { finishT += dt; if (mode === 'practice' && finishT > 2.5) { results = practiceResults(); state = 'results'; } }
   if (mode === 'online' && me && (state === 'count' || racing)) {
     sendT -= dt;
     if (sendT <= 0) { sendT = 0.05;
-      send({ type: 's', d: [+me.x.toFixed(1), +me.y.toFixed(1), +me.a.toFixed(3), +speedF(me).toFixed(1), me.turboOn ? 1 : 0, +me.f.toFixed(4), SURFS.indexOf(me.surf), me.lap] }); }
+      send({ type: 's', d: [+me.x.toFixed(1), +me.y.toFixed(1), +me.a.toFixed(3), +speedF(me).toFixed(1), flagsOf(me), +me.f.toFixed(4), SURFS.indexOf(me.surf), me.lap] }); }
   }
   shake = Math.max(0, shake - dt); msgT = Math.max(0, msgT - dt);
   followCam(me, dt);
@@ -532,11 +842,13 @@ function followCam(c, dt) {
   camX = c.x - Math.cos(camA) * CAMD; camY = c.y - Math.sin(camA) * CAMD;
 }
 function updateAttract(dt, now) {
-  // yarış sürüyorsa canlı izle, yoksa seçtiğin araba tek başına tur atsın
   let live = null;
   for (const [id, c] of spec) { if (now - c.seen > 3000) { spec.delete(id); continue; } updRemote(c, now); if (!live || progOf(c) > progOf(live)) live = c; }
   if (live) { followCam(live, dt); return; }
-  if (!demo || demo.def.key !== selCar) { const keep = demo; demo = makeCar(CARK[selCar], 0, 'ai'); if (keep) Object.assign(demo, { x: keep.x, y: keep.y, a: keep.a, vx: keep.vx, vy: keep.vy, idx: keep.idx }); else camA = demo.a; }
+  if (!demo || demo.def.key !== selCar || demo.tk !== TK) {
+    const keep = demo && demo.tk === TK ? demo : null; demo = makeCar(CARK[selCar], 0, 'ai'); demo.tk = TK;
+    if (keep) Object.assign(demo, { x: keep.x, y: keep.y, a: keep.a, vx: keep.vx, vy: keep.vy, idx: keep.idx }); else camA = demo.a;
+  }
   const inp = aiDrive(demo, dt, null); demo.turboOn = false;
   stepCar(demo, inp, dt); trackUpdate(demo, false); collide([demo]);
   stepParticles(dt);
@@ -575,27 +887,43 @@ function proj(x, y) {
   const lat = dx * -fy + dy * fx, k = F / depth;
   return { sx: W / 2 + lat * k, gy: HY + CAMH * k, k, depth };
 }
+function sprAt(img, p, ww, lift = 0) {
+  const dw = ww * p.k, dh = dw * img.height / img.width;
+  ctx.drawImage(img, Math.round(p.sx - dw / 2), Math.round(p.gy - dh - lift * p.k), Math.max(1, Math.round(dw)), Math.max(1, Math.round(dh)));
+}
 function drawWorld(list, target) {
+  const now = performance.now(), viewer = me || demo;
   const off = ((camA / TAU * PW) % PW + PW) % PW;
   ctx.drawImage(pano, -Math.round(off), 0); ctx.drawImage(pano, PW - Math.round(off), 0);
   drawGround();
   const items = [];
+  const add = (x, y, t, o, maxD) => { const p = proj(x, y); if (p && p.depth < maxD) items.push({ p, o, t }); };
   for (const o of objs) { const p = proj(o.x, o.y); if (!p || p.depth > 1500) continue; const w = o.ww * p.k; if (p.sx + w < -20 || p.sx - w > W + 20) continue; items.push({ p, o, t: 0 }); }
-  for (const pk of pickups) if (pk.on) { const p = proj(pk.x, pk.y); if (p && p.depth < 700) items.push({ p, o: pk, t: 1 }); }
-  for (const pa of particles) { const p = proj(pa.x, pa.y); if (p && p.depth < 500) items.push({ p, o: pa, t: 2 }); }
-  for (const c of list) { if (c === target) continue; const p = proj(c.x, c.y); if (p && p.depth < 1200) items.push({ p, o: c, t: 3 }); }
+  for (const pk of pickups) if (!(pk.tk.get(viewer) > now)) add(pk.x, pk.y, 1, pk, 700);
+  for (const b of boxes) if (!(b.tk.get(viewer) > now)) add(b.x, b.y, 5, b, 800);
+  for (const o of obst) if (!(o.k === 'cone' && o.tk.get(viewer) > now)) add(o.x, o.y, 6, o, 800);
+  for (const h of haz) add(h.x, h.y, 7, h, 700);
+  for (const pa of particles) add(pa.x, pa.y, 2, pa, 500);
+  for (const c of list) { if (c === target) continue; add(c.x, c.y, 3, c, 1200); }
   if (target) { const p = proj(target.x, target.y) || { depth: CAMD, sx: W / 2, gy: HY + CAMH * F / CAMD, k: F / CAMD }; items.push({ p, o: target, t: 4 }); }
   items.sort((a, b) => b.p.depth - a.p.depth);
   for (const it of items) {
     const { p, o } = it;
-    if (it.t === 0) {
-      const dw = o.ww * p.k, dh = dw * o.img.height / o.img.width;
-      ctx.drawImage(o.img, Math.round(p.sx - dw / 2), Math.round(p.gy - dh), Math.max(1, Math.round(dw)), Math.max(1, Math.round(dh)));
-    } else if (it.t === 1) {
+    if (it.t === 0) sprAt(o.img, p, o.ww);
+    else if (it.t === 1) {
       const dw = 6 * p.k, dh = dw * 10 / 8, bob = (Math.sin(gT * 4 + o.x) * 1.5 + 3) * p.k;
       ctx.fillStyle = 'rgba(63,208,240,.25)'; ctx.fillRect(Math.round(p.sx - dw * 0.8), Math.round(p.gy - dh - bob - dw * 0.3), Math.round(dw * 1.6), Math.round(dh + dw * 0.6));
       ctx.drawImage(imgH2, Math.round(p.sx - dw / 2), Math.round(p.gy - dh - bob), Math.max(1, Math.round(dw)), Math.max(1, Math.round(dh)));
-    } else if (it.t === 2) {
+    } else if (it.t === 5) {
+      const sc = Math.max(0.2, Math.abs(Math.cos(gT * 2.5 + o.ph))), dw = 7 * p.k, bob = (Math.sin(gT * 3 + o.ph) * 1 + 3) * p.k;
+      ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.fillRect(Math.round(p.sx - dw / 2), Math.round(p.gy - 1), Math.round(dw), Math.max(1, Math.round(p.k * .6)));
+      ctx.drawImage(imgBox, Math.round(p.sx - dw * sc / 2), Math.round(p.gy - dw - bob), Math.max(1, Math.round(dw * sc)), Math.max(1, Math.round(dw)));
+    } else if (it.t === 6) {
+      if (o.k === 'cone') sprAt(imgCone, p, 4.2);
+      else if (o.k === 'barrel') sprAt(imgBarrel, p, 7);
+      else sprAt(imgOil, p, 14);
+    } else if (it.t === 7) sprAt(imgOil, p, 13);
+    else if (it.t === 2) {
       const a = o.life / o.max, s = clamp(Math.round((3 + (1 - a) * 5) * p.k * 0.6), 1, 9);
       ctx.globalAlpha = a * 0.8; ctx.fillStyle = o.col; ctx.fillRect(Math.round(p.sx - s / 2), Math.round(p.gy - s - (1 - a) * 4 * p.k), s, s); ctx.globalAlpha = 1;
     } else if (it.t === 3) {
@@ -604,28 +932,51 @@ function drawWorld(list, target) {
       const ds = p.k * VW / SS;
       { const rel = wrapA(o.a - los), sw = (3.4 + 4.6 * Math.abs(Math.sin(rel))) * p.k; ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.fillRect(Math.round(p.sx - sw), Math.round(p.gy - p.k * 0.5), Math.round(sw * 2), Math.max(1, Math.round(p.k * 1))); }
       ctx.drawImage(o.def.sheet[k], Math.round(p.sx - SOX * ds), Math.round(p.gy - SOY * ds), Math.round(SW_ * ds), Math.round(SH_ * ds));
-      if (o.turboOn) for (let i = 0; i < 3; i++) { ctx.fillStyle = i % 2 ? '#ffd84a' : '#ff7a1a'; ctx.fillRect(Math.round(p.sx - 2 + Math.random() * 4), Math.round(p.gy - 3 - Math.random() * 3), 2, 2); }
-      if (p.depth < 240) { const tag = o.kind === 'ai' ? o.def.name : o.name; txt(tag, p.sx, p.gy - 22 * p.k * VW * 3 / 3 - 12, o.def.col, 8, 'center'); }
+      const fl = o.kind === 'remote' ? o.flags : flagsOf(o);
+      if (fl & 1) for (let i = 0; i < 3; i++) { ctx.fillStyle = i % 2 ? '#ffd84a' : '#ff7a1a'; ctx.fillRect(Math.round(p.sx - 2 + Math.random() * 4), Math.round(p.gy - 3 - Math.random() * 3), 2, 2); }
+      if (fl & 2) shieldRing(p.sx, p.gy - 4 * p.k, 10 * p.k);
+      if (p.depth < 240) { const tag = o.kind === 'ai' ? o.def.name : o.name; txt(tag, p.sx, p.gy - 22 * p.k * VW - 12, o.def.col, 8, 'center'); }
     } else {
       const s = p.k * VW, phi = wrapA(o.a - camA);
       const bounce = (o.surf === 'grass' || o.surf === 'gravel') && Math.abs(speedF(o)) > 30 ? Math.round(Math.random() * 2) : 0;
       { const sw = (3.6 + 4.6 * Math.abs(Math.sin(phi))) * p.k; ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.fillRect(Math.round(p.sx - sw), Math.round(p.gy - 2), Math.round(sw * 2), 4); }
       M.renderCar(ctx, o.def.model, Math.PI / 2 - phi, s, p.sx, p.gy - bounce, PITCH);
       if (o.turboOn) for (let i = 0; i < 6; i++) { ctx.fillStyle = i % 2 ? '#ffd84a' : '#ff7a1a'; ctx.fillRect(Math.round(p.sx - 7 + Math.random() * 14), Math.round(p.gy - 12 + Math.random() * 8), 3, 3); }
+      const fl = o.kind === 'remote' ? o.flags : flagsOf(o);
+      if (fl & 2) shieldRing(p.sx, p.gy - 12, 36);
+      if (fl & 8) for (let i = 0; i < 5; i++) { ctx.fillStyle = '#ffd84a'; const x = p.sx - 24 + Math.random() * 48, y = p.gy - 30 + Math.random() * 26; ctx.fillRect(Math.round(x), Math.round(y), 2, 6); ctx.fillRect(Math.round(x) + 2, Math.round(y) + 5, 2, 4); }
     }
   }
 }
+function shieldRing(x, y, r) {
+  ctx.strokeStyle = 'rgba(63,208,240,' + (0.45 + 0.25 * Math.sin(gT * 10)) + ')'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.ellipse(x, y, r, r * 0.7, 0, 0, TAU); ctx.stroke();
+}
+function drawRain() {
+  ctx.strokeStyle = 'rgba(210,222,235,.35)'; ctx.lineWidth = 1; ctx.beginPath();
+  const t = gT * 300;
+  for (let i = 0; i < 90; i++) { const x = (i * 97 + t * 0.4) % (W + 40) - 20, y = (i * 53 + t) % (H + 20) - 10; ctx.moveTo(x, y); ctx.lineTo(x - 3, y + 9); }
+  ctx.stroke();
+}
 function panel(x, y, w, h) { ctx.fillStyle = 'rgba(6,18,30,.88)'; ctx.fillRect(x, y, w, h); ctx.fillStyle = '#2a94d8'; ctx.fillRect(x, y, w, 2); ctx.fillRect(x, y + h - 2, w, 2); }
+const boardFor = (tk) => (board.tracks && board.tracks[tk]) || { laps: [], races: [] };
 function hud() {
   logoBadge(ctx, 4, 4);
   if (state === 'results') { drawResults(); return; }
   const st = standings(), pos = st.indexOf(me) + 1;
   txt(String(pos), 6, 24, '#ffffff', 16); txt('/' + cars.length, 24, 32, '#9ecbef', 8);
-  txt('TUR ' + clamp(me.lap + 1, 1, LAPS) + '/' + LAPS, W / 2, 5, '#ffffff', 8, 'center');
+  // eşya kutusu
+  if (race.items) {
+    const ix = 50, iy = 22; ctx.fillStyle = '#000'; ctx.fillRect(ix - 1, iy - 1, 22, 22); ctx.fillStyle = me.item ? '#13304d' : '#0b1a2a'; ctx.fillRect(ix, iy, 20, 20);
+    ctx.fillStyle = '#2a94d8'; ctx.fillRect(ix, iy, 20, 1); ctx.fillRect(ix, iy + 19, 20, 1);
+    if (me.item) { ctx.drawImage(ICONS[me.item], ix + 2, iy + 2, 16, 16); if (Math.floor(gT * 3) % 2) txt(coarse ? 'EŞYA' : 'E', ix + 24, iy + 7, '#ffd84a', 6, 'left'); }
+  }
+  txt('TUR ' + clamp(me.lap + 1, 1, race.laps) + '/' + race.laps, W / 2, 5, '#ffffff', 8, 'center');
   txt(fmt(state === 'count' ? 0 : raceT), W / 2, 16, '#ffd84a', 8, 'center');
   const kmh = Math.round(Math.abs(speedF(me)) * 0.22);
   txt(String(kmh), W - 46, 6, '#ffffff', 16, 'right'); txt('KM/H', W - 6, 14, '#9ecbef', 8, 'right');
-  const rec = mode === 'online' ? (board.laps[0] && board.laps[0].time) : me.bestStored;
+  const recL = boardFor(race.track).laps[0];
+  const rec = mode === 'online' ? (recL && recL.time) : me.bestStored;
   txt('REKOR ' + (rec ? fmt(rec) : '--:--.-'), W - 6, 28, '#c3ccd4', 8, 'right');
   if (me.bestLap) txt('SENİN ' + fmt(me.bestLap), W - 6, 38, '#9ecbef', 8, 'right');
   const mob = coarse;   // telefonda alt köşeler dokunmatik tuşlara ayrılır
@@ -635,14 +986,14 @@ function hud() {
   ctx.fillStyle = me.turboOn ? (Math.floor(gT * 10) % 2 ? '#ffd84a' : '#ff7a1a') : '#3fd0f0'; ctx.fillRect(tbx + 23, tby + 12, Math.round(me.turbo * 0.7), 8);
   const mx = W - MM - 4, my = mob ? 48 : H - MM - 4; ctx.drawImage(minimap, mx, my);
   for (const c of cars) { const x = mx + (c.x - mmScale.x0) * mmScale.s, y = my + (c.y - mmScale.y0) * mmScale.s, s = c === me ? 3 : 2;
-    ctx.fillStyle = '#000'; ctx.fillRect(Math.round(x) - s + 1 - 1, Math.round(y) - s + 1 - 1, s + 2, s + 2); ctx.fillStyle = c.def.col; ctx.fillRect(Math.round(x) - s + 1, Math.round(y) - s + 1, s, s); }
+    ctx.fillStyle = '#000'; ctx.fillRect(Math.round(x) - s, Math.round(y) - s, s + 2, s + 2); ctx.fillStyle = c.def.col; ctx.fillRect(Math.round(x) - s + 1, Math.round(y) - s + 1, s, s); }
   st.forEach((c, i) => { const y = 50 + i * 10; ctx.fillStyle = c.def.col; ctx.fillRect(6, y + 1, 4, 6);
     const nm = (c.kind === 'ai' ? c.def.name : c.name).toLocaleUpperCase('tr').slice(0, 10);
     txt((i + 1) + ' ' + nm, 13, y, c === me ? '#ffd84a' : c.finished ? '#5fd16b' : '#e6eef5', 8); });
   feed.forEach((f, i) => { ctx.globalAlpha = Math.min(1, f.life); if (mob) txt(f.t, W / 2, 84 + i * 10, f.col, 8, 'center'); else txt(f.t, W - 6, 52 + i * 10, f.col, 8, 'right'); ctx.globalAlpha = 1; });
   const dot = Math.cos(me.a) * TX[me.idx] + Math.sin(me.a) * TY[me.idx];
-  if (state === 'race' && dot < -0.35 && Math.abs(speedF(me)) > 15 && Math.floor(gT * 3) % 2) txt('TERS YÖN!', W / 2, 60, '#ff6a5e', 16, 'center');
-  if (msgT > 0) txt(msg, W / 2, 40, msgCol, 8, 'center');
+  if (state === 'race' && me.spinT <= 0 && dot < -0.35 && Math.abs(speedF(me)) > 15 && Math.floor(gT * 3) % 2) txt('TERS YÖN!', W / 2, 60, '#ff6a5e', 16, 'center');
+  if (msgT > 0) txt(msg, W / 2, 40 + (mob ? 22 : 0), msgCol, 8, 'center');
   if (graceEnd && state === 'race') { const left = Math.max(0, Math.ceil((graceEnd - performance.now()) / 1000)); txt('BİTİŞE ' + left + ' SN', W / 2, mob ? 54 : 28, '#ff6a5e', 8, 'center'); }
   if (state === 'count' || (state === 'race' && raceT < 1)) lights();
   if (state === 'paused') { panel(92, 80, 200, 50); txt('DURAKLATILDI', W / 2, 92, '#ffffff', 8, 'center'); txt('Esc: devam', W / 2, 110, '#9ecbef', 8, 'center'); }
@@ -653,6 +1004,7 @@ function lights() {
   const x0 = W / 2 - 50; ctx.fillStyle = '#0b0b0b'; ctx.fillRect(x0 - 4, 30, 108, 22);
   for (let i = 0; i < 5; i++) { ctx.fillStyle = go ? '#5fd16b' : i < L ? '#ff3b30' : '#3a1010'; ctx.fillRect(x0 + i * 21, 34, 15, 14); ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fillRect(x0 + i * 21 + 2, 36, 4, 3); }
   if (go) txt('BAŞLA!', W / 2, 58, '#5fd16b', 16, 'center');
+  if (state === 'count') txt(TRACKS[race.track].name + ' · ' + race.laps + ' TUR', W / 2, 58, '#ffffff', 8, 'center');
 }
 function drawResults() {
   const rows = results || [];
@@ -672,6 +1024,7 @@ function drawResults() {
 function drawAttractHUD() {
   logoBadge(ctx, 4, 4);
   if (spec.size) { ctx.fillStyle = '#d22f2a'; ctx.fillRect(4, 22, 60, 12); txt('CANLI', 34, 24, '#ffffff', 8, 'center', false); }
+  else if (TK) txt(TRACKS[TK].name, 6, 24, '#ffffff', 8);
 }
 function render() {
   if (state === 'boot') { ctx.fillStyle = '#0a1f33'; ctx.fillRect(0, 0, W, H); txt('YÜKLENİYOR…', W / 2, H / 2 - 4, '#e6eef5', 8, 'center'); return; }
@@ -680,10 +1033,12 @@ function render() {
   if (state === 'menu' || state === 'room') {
     const list = spec.size ? [...spec.values()] : [demo];
     let target = demo; if (spec.size) target = list.reduce((a, b) => progOf(b) > progOf(a) ? b : a);
-    drawWorld(list, target); ctx.restore(); drawAttractHUD(); return;
+    drawWorld(list, target); if (TH.rain && !reduced) drawRain(); ctx.restore(); drawAttractHUD(); return;
   }
   drawWorld(cars, me);
+  if (TH.rain && !reduced) drawRain();
   ctx.restore();
+  if (zapFlash > 0) { ctx.fillStyle = 'rgba(255,248,200,' + (zapFlash * 2) + ')'; ctx.fillRect(0, 0, W, H); }
   hud();
 }
 
@@ -695,7 +1050,7 @@ function buildPicker(el) {
   const btns = CARS.map(c => {
     const b = document.createElement('button'); b.type = 'button'; b.className = 'carbtn'; b.dataset.car = c.key;
     const cc = document.createElement('canvas'); cc.width = 96; cc.height = 48;
-    const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = c.name; nm.style.color = '';
+    const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = c.name;
     const tr = document.createElement('span'); tr.className = 'tr'; tr.textContent = c.trait + (c.num ? ' · #' + c.num : '');
     b.append(cc, nm, tr);
     b.addEventListener('click', () => chooseCar(c.key));
@@ -714,6 +1069,7 @@ function syncPickers() { for (const p of pickers) { p.b.setAttribute('aria-press
 function drawPreview(p, force) {
   const on = p.key === selCar;
   if (!on && !force) return;
+  if (!p.b.offsetParent && !force) return;
   if (on) p.yaw += 0.025;
   const g = p.g; g.imageSmoothingEnabled = false; g.clearRect(0, 0, 96, 48);
   g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(18, 38, 60, 4);
@@ -722,8 +1078,47 @@ function drawPreview(p, force) {
 function showScreen(which) {
   $('scrEntry').hidden = which !== 'entry';
   $('scrRoom').hidden = which !== 'room';
+  $('scrPractice').hidden = which !== 'practice';
   $('overlay').hidden = !which;
 }
+/* ---- yarış ayarları paneli ---- */
+const THUMBS = {};
+function cfgUI(el, onChange) {
+  el.textContent = '';
+  let cur = Object.assign({}, CFG_DEF), editable = true;
+  const mkEl = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+  const row = label => { const r = mkEl('div', 'cfgrow'); r.append(mkEl('span', 'cl', label)); el.append(r); return r; };
+  const tr = row('PİST'), tg = mkEl('div', 'tracks'); tr.append(tg);
+  const tbtn = [...TRACK_KEYS, 'random'].map(k => {
+    const b = mkEl('button', 'trk'); b.type = 'button';
+    const c = document.createElement('canvas'); c.width = 64; c.height = 40;
+    if (k === 'random') { const g = c.getContext('2d'); g.fillStyle = '#e6eef5'; g.font = '20px "Press Start 2P", monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('?', 32, 22); }
+    else c.getContext('2d').drawImage(THUMBS[k], 0, 0);
+    b.append(c, mkEl('span', null, k === 'random' ? 'RASTGELE' : TRACKS[k].short));
+    b.onclick = () => editable && onChange({ track: k }); tg.append(b); return [k, b];
+  });
+  const lr = row('TUR SAYISI'), st = mkEl('div', 'stepper'), minus = mkEl('button', 'btn ghost', '−'), val = mkEl('b', 'sv', '3'), plus = mkEl('button', 'btn ghost', '+');
+  minus.type = plus.type = 'button'; st.append(minus, val, plus); lr.append(st);
+  minus.onclick = () => editable && onChange({ laps: Math.max(1, cur.laps - 1) });
+  plus.onclick = () => editable && onChange({ laps: Math.min(10, cur.laps + 1) });
+  const seg = (label, key, opts) => {
+    const r = row(label), s = mkEl('div', 'seg'); r.append(s);
+    const bs = opts.map((o, i) => { const b = mkEl('button', null, o); b.type = 'button'; b.onclick = () => editable && onChange({ [key]: i }); s.append(b); return b; });
+    return () => bs.forEach((b, i) => { b.setAttribute('aria-pressed', String(cur[key] === i)); b.disabled = !editable; });
+  };
+  const syncs = [seg('EŞYA KUTULARI', 'items', ['KAPALI', 'NORMAL', 'BOL']), seg('ENGELLER', 'obst', ['YOK', 'AZ', 'NORMAL', 'ÇOK']),
+    seg('YAKALAMA BONUSU', 'catchup', ['KAPALI', 'AÇIK']), seg('ARAÇ ÇARPIŞMASI', 'collide', ['KAPALI', 'AÇIK'])];
+  el.append(mkEl('p', 'note', 'Yakalama bonusu açıkken geride kalan daha güçlü eşya alır (süper turbo, şimşek).'));
+  return {
+    set(cfg, ed) {
+      cur = Object.assign({}, CFG_DEF, cfg); editable = ed;
+      for (const [k, b] of tbtn) { b.setAttribute('aria-pressed', String(cur.track === k)); b.disabled = !ed; }
+      val.textContent = cur.laps; minus.disabled = plus.disabled = !ed;
+      syncs.forEach(f => f());
+    }
+  };
+}
+let cfgRoomUI, cfgPracUI;
 function renderRoom() {
   if (!room) return;
   $('roomCode').textContent = room.code;
@@ -741,12 +1136,16 @@ function renderRoom() {
   const host = room.players.find(p => p.id === room.host), isHost = room.host === myId;
   const live = room.phase !== 'lobby';
   $('btnStart').hidden = !isHost; $('btnStart').disabled = live;
+  if (cfgRoomUI) cfgRoomUI.set(room.cfg || CFG_DEF, isHost && !live);
+  $('cfgHint').textContent = isHost ? '(sen ayarlıyorsun)' : '(oda sahibi ayarlar)';
   $('roomNote').textContent = live ? (room.phase === 'results' ? 'Sonuçlar gösteriliyor, birazdan lobiye dönülecek.' : 'Yarış sürüyor, canlı izliyorsun. Bir sonraki yarışa katılacaksın.')
     : isHost ? (room.players.length < 2 ? 'Tek başına da başlatabilirsin; arkadaşların sonraki yarışa katılır.' : 'Herkes hazırsa başlat.') : 'Oda sahibinin (' + (host ? host.name : '…') + ') başlatması bekleniyor.';
+  if (!live && room.cfg && room.cfg.track !== 'random' && state === 'room') useTrack(room.cfg.track);
 }
-let lbTab = 'laps';
+let lbTab = 'laps', lbTrack = 'istanbul';
 function renderBoard() {
-  const list = (board[lbTab] || []).slice(0, 10), tb = $('lb').tBodies[0]; tb.textContent = '';
+  for (const b of document.querySelectorAll('#lbTracks .tab')) b.setAttribute('aria-selected', String(b.dataset.t === lbTrack));
+  const list = (boardFor(lbTrack)[lbTab] || []).slice(0, 10), tb = $('lb').tBodies[0]; tb.textContent = '';
   const mine = playerName().toLocaleLowerCase('tr');
   list.forEach((r, i) => {
     const tr = document.createElement('tr'); if (i < 3) tr.className = 'top' + (i + 1); if (mine && r.name.toLocaleLowerCase('tr') === mine) tr.classList.add('me');
@@ -760,6 +1159,7 @@ function renderBoard() {
 }
 $('tabLap').onclick = () => { lbTab = 'laps'; $('tabLap').setAttribute('aria-selected', 'true'); $('tabRace').setAttribute('aria-selected', 'false'); renderBoard(); };
 $('tabRace').onclick = () => { lbTab = 'races'; $('tabRace').setAttribute('aria-selected', 'true'); $('tabLap').setAttribute('aria-selected', 'false'); renderBoard(); };
+for (const k of TRACK_KEYS) { const b = document.createElement('button'); b.className = 'tab'; b.dataset.t = k; b.textContent = TRACKS[k].short; b.onclick = () => { lbTrack = k; renderBoard(); }; $('lbTracks').append(b); }
 
 function needName(errEl) {
   const n = playerName();
@@ -775,7 +1175,9 @@ $('btnCreate').onclick = () => { initAudio(); const e = $('entryErr'); e.textCon
 $('btnJoin').onclick = () => { initAudio(); const e = $('entryErr'); e.textContent = ''; const n = needName(e); if (!n || !needNet(e)) return;
   const code = $('code').value.trim().toUpperCase(); if (code.length !== 4) { e.textContent = 'Oda kodu 4 harf olmalı.'; $('code').focus(); return; }
   send({ type: 'join', code, name: n, car: selCar }); };
-$('btnPractice').onclick = () => { if (state === 'boot') return; store.set('hgp-name', playerName()); startPractice(); };
+$('btnPractice').onclick = () => { if (state === 'boot') return; store.set('hgp-name', playerName()); showScreen('practice'); cfgPracUI.set(pcfg, true); if (pcfg.track !== 'random') useTrack(pcfg.track); };
+$('btnPBack').onclick = () => showScreen('entry');
+$('btnPStart').onclick = () => startPractice();
 $('btnStart').onclick = () => { initAudio(); send({ type: 'start' }); };
 $('btnLeave').onclick = () => { send({ type: 'leave' }); };
 $('btnCopyLink').onclick = async () => {
@@ -823,11 +1225,15 @@ function onMsg(m) {
       try { history.replaceState(null, '', location.pathname + '?oda=' + m.code); } catch (e) {}
       break;
     case 'room': room = m; renderRoom();
-      if (m.phase === 'lobby' && (state === 'results' || state === 'finish' || state === 'race' || state === 'count')) { cars = []; me = null; graceEnd = 0; state = 'room'; showScreen('room'); }
+      if (m.phase === 'lobby' && (state === 'results' || state === 'finish' || state === 'race' || state === 'count')) { cars = []; me = null; graceEnd = 0; state = 'room'; showScreen('room'); renderRoom(); }
       break;
     case 'leftRoom': room = null; mode = null; spec.clear(); state = 'menu'; showScreen('entry'); try { history.replaceState(null, '', location.pathname); } catch (e) {} break;
     case 'error': ($('scrRoom').hidden ? $('entryErr') : $('roomErr')).textContent = m.msg; break;
-    case 'count': if (m.grid.includes(myId)) enterOnlineRace(m.grid); break;
+    case 'count':
+      race = Object.assign({}, CFG_DEF, m.cfg || {}, { seed: m.seed | 0 });
+      useTrack(race.track);
+      if (m.grid.includes(myId)) enterOnlineRace(m.grid);
+      break;
     case 'go': if (mode === 'online' && state === 'count') goRace(); break;
     case 'S':
       for (const d of m.p) {
@@ -860,6 +1266,15 @@ function onMsg(m) {
       if (mode === 'online' && me) { results = m.rows; state = 'results'; graceEnd = 0; }
       break;
     case 'board': board = m.board; renderBoard(); break;
+    case 'drop': haz.push({ id: m.id, x: m.x, y: m.y, owner: m.owner, t0: now }); break;
+    case 'hazGone': removeHaz(m.id); break;
+    case 'zap':
+      if (m.id !== myId && me && !me.finished && state === 'race' && progOf(me) > m.p) {
+        if (me.shieldT > 0) flash('KALKAN KORUDU', '#3fd0f0');
+        else { me.zapT = 2.6; flash('ŞİMŞEK ÇARPTI! (' + nameOf(m.id).toLocaleUpperCase('tr').slice(0, 8) + ')', '#ffd84a'); shake = 0.3; }
+      }
+      if (state === 'race' || state === 'finish') { zapFlash = 0.25; sfx('zap'); }
+      break;
     case 'left': { const i = cars.findIndex(c => c.id === m.id); if (i >= 0 && cars[i] !== me) { pushFeed(cars[i].name.toLocaleUpperCase('tr').slice(0, 10) + ' AYRILDI', '#ff6a5e'); cars.splice(i, 1); } spec.delete(m.id); break; }
   }
 }
@@ -891,6 +1306,7 @@ addEventListener('keydown', e => {
   if (!e.repeat) {
     if (k === 'enter') confirmAction();
     if (k === 'escape' || k === 'p') togglePause();
+    if ((k === 'e' || k === 'x' || k === 'q') && me && inGame) useItem(me);
     if ((state === 'menu' || state === 'room') && (k === 'arrowleft' || k === 'arrowright')) {
       const i = CARS.findIndex(c => c.key === selCar); chooseCar(CARS[(i + (k === 'arrowright' ? 1 : 3)) % 4].key);
     }
@@ -900,13 +1316,13 @@ addEventListener('keydown', e => {
 addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
 cv.addEventListener('pointerdown', () => { initAudio(); if (state === 'results' || state === 'paused') confirmAction(); });
-// dokunmatik tuşlar
-for (const b of document.querySelectorAll('#touch button')) {
+for (const b of document.querySelectorAll('#touch button[data-k]')) {
   const k = b.dataset.k;
   const on = e => { e.preventDefault(); keys[k] = true; b.classList.add('on'); initAudio(); };
   const off = e => { e.preventDefault(); keys[k] = false; b.classList.remove('on'); };
   b.addEventListener('pointerdown', on); b.addEventListener('pointerup', off); b.addEventListener('pointercancel', off); b.addEventListener('pointerleave', off);
 }
+$('tItem').addEventListener('pointerdown', e => { e.preventDefault(); if (me) useItem(me); });
 const clamp1 = v => clamp(v, -1, 1);
 function readInput() {
   const kS = (keys.arrowright || keys.d ? 1 : 0) - (keys.arrowleft || keys.a ? 1 : 0);
@@ -921,6 +1337,7 @@ function joyMenuNav() {
   if (!navLatch && Math.abs(joy.x) > 0.6) { const i = CARS.findIndex(c => c.key === selCar); chooseCar(CARS[(i + (joy.x > 0 ? 1 : 3)) % 4].key); navLatch = true; }
   if (Math.abs(joy.x) < 0.3) navLatch = false;
 }
+
 
 /* =========================================================
    WEB SERIAL (Arduino joystick)
@@ -942,6 +1359,7 @@ function handleLine(line) {
   if (calib.active) { calib.sx += x; calib.sy += y; calib.n++; if (calib.n >= 15) { cal.cx = calib.sx / calib.n; cal.cy = calib.sy / calib.n; calib.active = false; joy.ok = true; setStatus('ok', 'Bağlı. Joystick merkezi ayarlandı, oynamaya hazır.'); } return; }
   joy.x = norm(x, cal.cx) * (invX.checked ? -1 : 1); joy.y = -norm(y, cal.cy) * (invY.checked ? -1 : 1);
   if (b && !joy.b && state !== 'race' && state !== 'finish') confirmAction();
+  else if (b && !joy.b && me && me.item && state === 'race') useItem(me);
   joy.b = b;
 }
 function startCalib() { calib = { n: 0, sx: 0, sy: 0, active: true }; }
@@ -992,17 +1410,18 @@ function initAudio() {
 function sfx(type) {
   if (!ac || muted) return;
   const t = ac.currentTime;
-  if (type === 'turbo' || type === 'crash' || type === 'bump') {
+  if (type === 'turbo' || type === 'crash' || type === 'bump' || type === 'zap') {
     const len = type === 'turbo' ? 0.5 : 0.25, buf = ac.createBuffer(1, ac.sampleRate * len, ac.sampleRate), d = buf.getChannelData(0);
     for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
     const src = ac.createBufferSource(), g = ac.createGain(), f = ac.createBiquadFilter();
-    f.type = type === 'turbo' ? 'bandpass' : 'lowpass'; f.frequency.value = type === 'turbo' ? 1200 : 500;
+    f.type = type === 'turbo' ? 'bandpass' : type === 'zap' ? 'highpass' : 'lowpass'; f.frequency.value = type === 'turbo' ? 1200 : type === 'zap' ? 2500 : 500;
     g.gain.value = type === 'bump' ? 0.05 : 0.09; src.buffer = buf; src.connect(f).connect(g).connect(ac.destination); src.start(t); return;
   }
   const o = ac.createOscillator(), g = ac.createGain(); o.type = 'square'; let dur = 0.18;
   if (type === 'pick') { o.frequency.setValueAtTime(660, t); o.frequency.setValueAtTime(990, t + 0.06); }
   else if (type === 'beep') o.frequency.setValueAtTime(440, t);
   else if (type === 'go') { o.frequency.setValueAtTime(880, t); dur = 0.4; }
+  else if (type === 'box') { o.frequency.setValueAtTime(523, t); o.frequency.setValueAtTime(784, t + 0.05); o.frequency.setValueAtTime(1047, t + 0.1); dur = 0.22; }
   else if (type === 'lap') { o.frequency.setValueAtTime(523, t); o.frequency.setValueAtTime(659, t + 0.08); o.frequency.setValueAtTime(784, t + 0.16); dur = 0.3; }
   g.gain.setValueAtTime(0.06, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
   o.connect(g).connect(ac.destination); o.start(t); o.stop(t + dur + 0.02);
@@ -1102,9 +1521,11 @@ const raceUI = () => state === 'race' || state === 'count' || state === 'finish'
 function uiTick() {
   const portrait = innerHeight > innerWidth;
   $('touch').hidden = !(coarse && raceUI());
+  $('tItem').hidden = !race.items;
   $('rotate').hidden = !(coarse && portrait && raceUI());
   $('tools').hidden = !(state === 'menu' || state === 'room' || state === 'boot' || state === 'results' || state === 'paused');
 }
+
 
 /* =========================================================
    BAŞLAT
@@ -1128,14 +1549,23 @@ async function init() {
   if (document.fonts && document.fonts.load) await Promise.race([document.fonts.load('8px "Press Start 2P"').catch(() => {}), new Promise(r => setTimeout(r, 1500))]);
   await new Promise(r => setTimeout(r, 30));
   buildCars();
-  buildArt(); buildTrack(); buildTexture(); buildPano(); buildObjects();
+  buildArt();
+  for (const k of TRACK_KEYS) THUMBS[k] = trackThumb(k, 64, 40);
   ground = ctx.createImageData(W, H - HY); g32 = new Uint32Array(ground.data.buffer);
-  haze = ctx.createLinearGradient(0, HY, 0, HY + 46); haze.addColorStop(0, 'rgba(172,211,241,.85)'); haze.addColorStop(1, 'rgba(172,211,241,0)');
+  useTrack(pcfg.track !== 'random' ? pcfg.track : 'istanbul');
   buildPicker($('carsEntry')); buildPicker($('carsRoom')); syncPickers();
+  cfgRoomUI = cfgUI($('cfgRoom'), patch => { if (room && room.host === myId) send({ type: 'cfg', cfg: Object.assign({}, CFG_DEF, room.cfg, patch) }); });
+  cfgPracUI = cfgUI($('cfgPractice'), patch => {
+    pcfg = Object.assign({}, pcfg, patch); store.set('hgp-pcfg', pcfg); cfgPracUI.set(pcfg, true);
+    if (patch.track && patch.track !== 'random') useTrack(patch.track);
+  });
+  cfgPracUI.set(pcfg, true);
   renderBoard();
   state = 'menu'; showScreen('entry');
   connect();
 }
-window.__hgp = { get state() { return state; }, get room() { return room; }, get me() { return me; }, get cars() { return cars; }, get board() { return board; }, get myId() { return myId; }, send, chooseCar };
+window.__hgp = { get state() { return state; }, get room() { return room; }, get me() { return me; }, get cars() { return cars; }, get board() { return board; },
+  get myId() { return myId; }, get race() { return race; }, get NS() { return NS; }, get tex() { return tc; }, send, chooseCar, useTrack, useItem, startPractice,
+  setPcfg(c) { pcfg = Object.assign({}, pcfg, c); }, get haz() { return haz; }, get obst() { return obst; }, get boxes() { return boxes; } };
 init();
 })();

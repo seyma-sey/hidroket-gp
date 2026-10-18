@@ -164,6 +164,19 @@ pre{margin:0;background:#061526;border:1px solid var(--line);padding:14px;overfl
   .cars{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media (prefers-reduced-motion:reduce){.btn:active{transform:none}}
+.cfg{display:flex;flex-direction:column;gap:10px}
+.cfgrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.cfgrow .cl{font-family:var(--f-pix);font-size:8px;color:var(--dim);min-width:11em}
+.tracks{display:flex;gap:6px;flex-wrap:wrap}
+.trk{background:#0b2238;border:2px solid var(--line);color:var(--ink);padding:4px 4px 6px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:var(--f-pix);font-size:7px}
+.trk canvas{width:64px;height:40px;image-rendering:pixelated}
+.trk[aria-pressed="true"]{border-color:var(--gold);color:var(--gold);background:#13304d}
+.trk:disabled,.seg button:disabled{cursor:default;opacity:.75}
+.stepper{display:flex;align-items:center;gap:8px}
+.stepper .btn{padding:8px 12px}
+.stepper .sv{font-family:var(--f-pix);font-size:12px;min-width:2em;text-align:center}
+.cfg .note{font-size:11.5px}
+@media (max-height:540px){.trk canvas{width:48px;height:30px}.cfgrow .cl{min-width:0;width:100%}}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -182,6 +195,7 @@ pre{margin:0;background:#061526;border:1px solid var(--line);padding:14px;overfl
     <div class="touch" id="touch" hidden>
       <div class="grp" id="tSteer"><button data-k="arrowleft" aria-label="Sola">◀</button><button data-k="arrowright" aria-label="Sağa">▶</button></div>
       <div class="grp" id="tTilt" hidden><button class="sm" id="tCal" aria-label="Direksiyonu ortala">ORTA</button></div>
+      <div class="grp"><button class="sm" id="tItem" aria-label="Eşyayı kullan">EŞYA</button></div>
       <div class="grp">
         <div class="col"><button class="sm" data-k="shift" aria-label="Turbo">H2</button><button data-k="arrowdown" aria-label="Fren">FREN</button></div>
         <button class="big" data-k="arrowup" aria-label="Gaz">GAZ</button>
@@ -209,7 +223,7 @@ pre{margin:0;background:#061526;border:1px solid var(--line);padding:14px;overfl
         <p class="err" id="entryErr" role="alert"></p>
         <div class="sep">ya da</div>
         <div class="row split">
-          <button class="btn ghost" id="btnPractice">ANTRENMAN (3 BOT)</button>
+          <button class="btn ghost" id="btnPractice">ANTRENMAN</button>
           <div class="status" id="netStatus" data-s="wait"><span class="dot"></span><span id="netText">Sunucuya bağlanılıyor…</span></div>
         </div>
       </section>
@@ -235,11 +249,21 @@ pre{margin:0;background:#061526;border:1px solid var(--line);padding:14px;overfl
           <label>ARACIN</label>
           <div class="cars" id="carsRoom"></div>
         </div>
+        <div class="field">
+          <label>YARIŞ AYARLARI <span id="cfgHint"></span></label>
+          <div class="cfg" id="cfgRoom"></div>
+        </div>
         <p class="err" id="roomErr" role="alert"></p>
         <div class="row split">
           <p class="note" id="roomNote"></p>
           <button class="btn go" id="btnStart">YARIŞI BAŞLAT</button>
         </div>
+      </section>
+      <!-- antrenman ayarları -->
+      <section class="card" id="scrPractice" hidden>
+        <div class="row split"><h2>ANTRENMAN · 3 BOTA KARŞI</h2><button class="btn ghost" id="btnPBack">GERİ</button></div>
+        <div class="cfg" id="cfgPractice"></div>
+        <div class="row split"><p class="note">Antrenman dereceleri sadece bu cihazda tutulur, skor tablosuna online yarışlar yazılır.</p><button class="btn go" id="btnPStart">BAŞLA</button></div>
       </section>
     </div>
   </div>
@@ -254,6 +278,7 @@ pre{margin:0;background:#061526;border:1px solid var(--line);padding:14px;overfl
 <div class="drawer" id="drawerBoard" hidden>
   <div class="dcard" role="dialog" aria-label="Skor tablosu">
     <div class="dhead"><h2>SKOR TABLOSU</h2><button class="btn ghost" data-close>KAPAT</button></div>
+    <div class="tabs" id="lbTracks"></div>
     <div class="tabs" role="tablist">
       <button class="tab" role="tab" id="tabLap" aria-selected="true">EN HIZLI TUR</button>
       <button class="tab" role="tab" id="tabRace" aria-selected="false">3 TUR YARIŞ</button>
@@ -302,7 +327,8 @@ pre{margin:0;background:#061526;border:1px solid var(--line);padding:14px;overfl
         <dl class="keys">
           <dt>Gaz / Fren</dt><dd>↑ ↓ · W S · GAZ / FREN · joystick ileri / geri</dd>
           <dt>Direksiyon</dt><dd>← → · A D · ◀ ▶ · joystick sağ / sol</dd>
-          <dt>H2 Turbo</dt><dd>Space / Shift · H2 · joystick butonu</dd>
+          <dt>H2 Turbo</dt><dd>Space / Shift · H2 · joystick butonunu basılı tut</dd>
+          <dt>Eşya</dt><dd>E · EŞYA tuşu · joystick butonuna bir kez bas</dd>
           <dt>Oda sahibi</dt><dd>Enter veya joystick butonu ile başlatır</dd>
         </dl>
         <p class="note">iPhone'da gerçek tam ekran için: Safari'de Paylaş → <b>Ana Ekrana Ekle</b>, oyunu oradaki simgeden aç.</p>

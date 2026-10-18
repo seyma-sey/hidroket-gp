@@ -14,8 +14,14 @@ const UPSTASH_URL = process.env.UPSTASH_REDIS_REST_URL || "";
 const UPSTASH_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN || "";
 const LB_KEY = "hidroket-gp-leaderboard";
 
-const LAPS = 3;
-const MIN_LAP = 14;            // saniye: bundan hızlı tur fiziksel olarak imkânsız
+const TRACKS = ["istanbul", "monaco", "spa"];
+const MIN_LAP = { istanbul: 12, monaco: 10, spa: 14 };   // saniye: bundan hızlı tur imkânsız
+const CFG_DEF = { track: "istanbul", laps: 3, items: 1, obst: 1, catchup: 1, collide: 1 };
+function cleanCfg(c) {
+  c = c || {}; const n = (v, lo, hi, d) => Number.isInteger(v) && v >= lo && v <= hi ? v : d;
+  return { track: TRACKS.includes(c.track) || c.track === "random" ? c.track : CFG_DEF.track, laps: n(c.laps, 1, 10, 3),
+    items: n(c.items, 0, 2, 1), obst: n(c.obst, 0, 3, 1), catchup: n(c.catchup, 0, 1, 1), collide: n(c.collide, 0, 1, 1) };
+}
 const MAX_PLAYERS = 8;
 const FINISH_GRACE = 30000;    // ilk araç bitirince diğerlerine kalan süre (ms)
 const RACE_TIMEOUT = 6 * 60000;
@@ -41,7 +47,7 @@ const server = http.createServer((req, res) => {
 });
 
 /* ---------------- skor tablosu ---------------- */
-let board = { laps: [], races: [] };
+let board = { tracks: {} };
 let saveTimer = null;
 async function loadBoard() {
   try {
@@ -55,8 +61,8 @@ async function loadBoard() {
       console.log("Skor tablosu dosyadan yüklendi.");
     }
   } catch (e) { console.warn("Skor tablosu yüklenemedi:", e.message); }
-  board.laps = Array.isArray(board.laps) ? board.laps : [];
-  board.races = Array.isArray(board.races) ? board.races : [];
+  if (!board || typeof board.tracks !== "object") board = { tracks: {} };   // eski kampüs pistinin kayıtları bırakılır
+  for (const t of TRACKS) { const b = board.tracks[t] = board.tracks[t] || {}; b.laps = Array.isArray(b.laps) ? b.laps : []; b.races = Array.isArray(b.races) ? b.races : []; }
 }
 function saveBoard() {
   clearTimeout(saveTimer);
@@ -93,11 +99,11 @@ function cleanName(n) {
 function send(ws, msg) { if (ws.readyState === 1) ws.send(JSON.stringify(msg)); }
 function broadcast(room, msg) { const s = JSON.stringify(msg); for (const p of room.players.values()) if (p.ws.readyState === 1) p.ws.send(s); }
 function roomInfo(room) {
-  return { type: "room", code: room.code, host: room.host, phase: room.phase,
+  return { type: "room", code: room.code, host: room.host, phase: room.phase, cfg: room.cfg,
     players: [...room.players.values()].map(p => ({ id: p.id, name: p.name, car: p.car, racing: p.racing, finished: p.finished })) };
 }
 function pushRoom(room) { broadcast(room, roomInfo(room)); }
-function makeRoom() { const room = { code: newCode(), host: 0, players: new Map(), phase: "lobby", raceStart: 0, firstFinish: 0, timers: [] }; rooms.set(room.code, room); return room; }
+function makeRoom() { const room = { code: newCode(), host: 0, players: new Map(), phase: "lobby", raceStart: 0, firstFinish: 0, timers: [], cfg: Object.assign({}, CFG_DEF), race: null, hz: 0 }; rooms.set(room.code, room); return room; }
 function clearTimers(room) { room.timers.forEach(clearTimeout); room.timers = []; }
 function joinRoom(p, room) {
   leaveRoom(p);
@@ -119,9 +125,12 @@ function leaveRoom(p) {
 function startRace(room) {
   clearTimers(room);
   const order = [...room.players.values()].sort(() => Math.random() - .5);
-  order.forEach((p, i) => Object.assign(p, { racing: true, finished: false, lap: 0, sect: 0, lapStart: 0, best: 0, total: 0, laps: [], f: 0, st: null, slot: i }));
+  order.forEach((p, i) => Object.assign(p, { racing: true, finished: false, lap: 0, sect: 0, lapStart: 0, best: 0, total: 0, laps: [], f: 0, st: null, slot: i, lastAct: 0 }));
+  const cfg = Object.assign({}, room.cfg);
+  if (cfg.track === "random") cfg.track = TRACKS[Math.random() * TRACKS.length | 0];
+  room.race = cfg;
   room.phase = "count";
-  broadcast(room, { type: "count", ms: 3600, grid: order.map(p => p.id) });
+  broadcast(room, { type: "count", ms: 3600, grid: order.map(p => p.id), cfg, seed: (Math.random() * 1e9) | 0 });
   pushRoom(room);
   room.timers.push(setTimeout(() => {
     room.phase = "race"; room.raceStart = Date.now(); room.firstFinish = 0;
@@ -160,16 +169,17 @@ function onLap(p, m) {
   const room = p.room; if (!room || room.phase !== "race" || !p.racing || p.finished) return;
   const n = m.n | 0, time = +m.time, total = +m.total;
   const elapsed = (Date.now() - room.raceStart) / 1000;
-  if (n !== p.lap + 1 || p.sect < 3 || !(time >= MIN_LAP) || !(total >= elapsed - 2.5) || total > elapsed + 1) {
+  const rc = room.race || CFG_DEF, tb = board.tracks[rc.track];
+  if (n !== p.lap + 1 || p.sect < 3 || !(time >= (MIN_LAP[rc.track] || 10)) || !(total >= elapsed - 2.5) || total > elapsed + 1) {
     send(p.ws, { type: "lapRejected", n }); return;
   }
   p.lap = n; p.sect = 0; p.laps.push(time); p.total = total;
   if (!p.best || time < p.best) p.best = time;
-  let rec = addRecord(board.laps, { name: p.name, car: p.car, time: +time.toFixed(3), date: Date.now() });
+  let rec = addRecord(tb.laps, { name: p.name, car: p.car, time: +time.toFixed(3), date: Date.now() });
   broadcast(room, { type: "lap", id: p.id, n, time });
-  if (n >= LAPS) {
+  if (n >= rc.laps) {
     p.finished = true;
-    rec = addRecord(board.races, { name: p.name, car: p.car, time: +total.toFixed(3), date: Date.now() }) || rec;
+    if (rc.laps === 3) rec = addRecord(tb.races, { name: p.name, car: p.car, time: +total.toFixed(3), date: Date.now() }) || rec;
     broadcast(room, { type: "finish", id: p.id, total });
     if (!room.firstFinish) { room.firstFinish = Date.now(); room.timers.push(setTimeout(() => endRace(room), FINISH_GRACE)); broadcast(room, { type: "grace", ms: FINISH_GRACE }); }
     checkRaceEnd(room);
@@ -235,7 +245,7 @@ server.on("upgrade", (req, socket) => {
 });
 function onConnection(ws) {
   const p = { id: nextId++, ws, name: "Pilot", car: "turaz", room: null, racing: false, finished: false, f: 0, st: null, msgs: 0, alive: true };
-  send(ws, { type: "welcome", id: p.id, laps: LAPS, board });
+  send(ws, { type: "welcome", id: p.id, board });
   ws.on("message", raw => {
     if (++p.msgs > 80) return;            // saniyede en fazla ~80 mesaj
     let m; try { m = JSON.parse(raw); } catch (e) { return; }
@@ -265,6 +275,15 @@ function onConnection(ws) {
         break;
       }
       case "lap": onLap(p, m); break;
+      case "cfg": if (p.room && p.room.host === p.id && p.room.phase === "lobby") { p.room.cfg = cleanCfg(m.cfg); pushRoom(p.room); } break;
+      case "drop": case "zap": {   // eşya: yağ lekesi bırak / şimşek
+        const room = p.room; if (!room || room.phase !== "race" || !p.racing) return;
+        const now = Date.now(); if (now - (p.lastAct || 0) < 800) return; p.lastAct = now;
+        if (m.type === "drop") { const x = +m.x, y = +m.y; if (!Number.isFinite(x) || !Number.isFinite(y)) return; broadcast(room, { type: "drop", id: ++room.hz, x, y, owner: p.id }); }
+        else { const pr = +m.p; if (!Number.isFinite(pr)) return; broadcast(room, { type: "zap", id: p.id, p: pr }); }
+        break;
+      }
+      case "hazHit": if (p.room && Number.isInteger(m.id)) broadcast(p.room, { type: "hazGone", id: m.id }); break;
     }
   });
   ws.on("close", () => leaveRoom(p));
