@@ -130,6 +130,7 @@ table.lb td{padding:7px 8px;border-bottom:1px solid #16385a;white-space:nowrap}
 table.lb td.r{font-family:var(--f-pix);font-size:10px;color:var(--dim);width:2.5em}
 table.lb tr.top1 td.r{color:var(--gold)} table.lb tr.top2 td.r{color:#d7dde3} table.lb tr.top3 td.r{color:#e09a5a}
 table.lb tr.me td{background:#13304d}
+table.lb td.ob{font-family:var(--f-pix);font-size:8px;color:var(--dim)} table.lb td.o0{color:#8fd19e} table.lb td.o2{color:#ffd84a} table.lb td.o3{color:#ff6a5e}
 table.lb td.t{text-align:right;color:var(--ink);font-weight:600}
 table.lb .sw{display:inline-block;width:9px;height:9px;margin-right:6px;vertical-align:0}
 .empty{color:var(--dim);font-size:13px;margin:0}
@@ -283,7 +284,7 @@ pre{margin:0;background:#061526;border:1px solid var(--line);padding:14px;overfl
       <button class="tab" role="tab" id="tabLap" aria-selected="true">EN HIZLI TUR</button>
       <button class="tab" role="tab" id="tabRace" aria-selected="false">3 TUR YARIŞ</button>
     </div>
-    <div class="lbwrap"><table class="lb" id="lb"><thead><tr><th>#</th><th>PİLOT</th><th>ARAÇ</th><th style="text-align:right">SÜRE</th></tr></thead><tbody></tbody></table></div>
+    <div class="lbwrap"><table class="lb" id="lb"><thead><tr><th>#</th><th>PİLOT</th><th>ARAÇ</th><th>ENGEL</th><th style="text-align:right">SÜRE</th></tr></thead><tbody></tbody></table></div>
     <p class="empty" id="lbEmpty">Henüz kayıt yok. İlk turu sen at.</p>
   </div>
 </div>
@@ -324,11 +325,14 @@ pre{margin:0;background:#061526;border:1px solid var(--line);padding:14px;overfl
         <label class="chk"><input type="checkbox" id="autoGas"> Otomatik gaz (sadece FREN'e basarsın)</label>
         <label class="chk"><input type="checkbox" id="tiltInv"> Eğme yönünü ters çevir</label>
         <p class="note" id="tiltNote">Eğerek sür: telefonu direksiyon gibi sağa sola çevir. Yarış başında düz tuttuğun an "orta" kabul edilir; ORTA tuşuyla yeniden ortalayabilirsin.</p>
+        <h3>KLAVYE</h3>
+        <label class="chk"><input type="checkbox" id="turboLatch"> Turbo tek basışla açılsın (turboda sağa sola dönemiyorsan aç)</label>
+        <p class="note">Bazı klavyeler ↑ + ← + Space'i aynı anda okuyamıyor. Turbo zaten gazı da bastığı için turboda ↑'yu bırakabilirsin; ya da Space yerine Shift kullan.</p>
         <h3>NASIL OYNANIR</h3>
         <dl class="keys">
           <dt>Gaz / Fren</dt><dd>↑ ↓ · W S · GAZ / FREN · joystick ileri / geri</dd>
           <dt>Direksiyon</dt><dd>← → · A D · ◀ ▶ · joystick sağ / sol</dd>
-          <dt>H2 Turbo</dt><dd>Space / Shift · H2 · joystick butonunu basılı tut (gazı da basar)</dd>
+          <dt>H2 Turbo</dt><dd>Space / Shift · H2 · joystick butonunu basılı tut (gazı da basar, ↑'ya basmana gerek yok)</dd>
           <dt>Eşya</dt><dd>E · EŞYA tuşu · joystick butonuna bir kez bas</dd>
           <dt>Oda sahibi</dt><dd>Enter veya joystick butonu ile başlatır</dd>
         </dl>

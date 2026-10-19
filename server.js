@@ -14,8 +14,8 @@ const UPSTASH_URL = (process.env.UPSTASH_REDIS_REST_URL || "").trim().replace(/\
 const UPSTASH_TOKEN = (process.env.UPSTASH_REDIS_REST_TOKEN || "").trim().replace(/^"|"$/g, "");
 const LB_KEY = "hidroket-gp-leaderboard";
 
-const TRACKS = ["istanbul", "monaco", "spa"];
-const MIN_LAP = { istanbul: 12, monaco: 10, spa: 14 };   // saniye: bundan hızlı tur imkânsız
+const TRACKS = ["istanbul", "monaco", "spa", "monza", "baku"];
+const MIN_LAP = { istanbul: 12, monaco: 10, spa: 14, monza: 11, baku: 12 };   // saniye: bundan hızlı tur imkânsız
 const CFG_DEF = { track: "istanbul", laps: 3, items: 1, obst: 1, catchup: 1, collide: 1 };
 function cleanCfg(c) {
   c = c || {}; const n = (v, lo, hi, d) => Number.isInteger(v) && v >= lo && v <= hi ? v : d;
@@ -175,11 +175,11 @@ function onLap(p, m) {
   }
   p.lap = n; p.sect = 0; p.laps.push(time); p.total = total;
   if (!p.best || time < p.best) p.best = time;
-  let rec = addRecord(tb.laps, { name: p.name, car: p.car, time: +time.toFixed(3), date: Date.now() });
+  let rec = addRecord(tb.laps, { name: p.name, car: p.car, obst: rc.obst, time: +time.toFixed(3), date: Date.now() });
   broadcast(room, { type: "lap", id: p.id, n, time });
   if (n >= rc.laps) {
     p.finished = true;
-    if (rc.laps === 3) rec = addRecord(tb.races, { name: p.name, car: p.car, time: +total.toFixed(3), date: Date.now() }) || rec;
+    if (rc.laps === 3) rec = addRecord(tb.races, { name: p.name, car: p.car, obst: rc.obst, time: +total.toFixed(3), date: Date.now() }) || rec;
     broadcast(room, { type: "finish", id: p.id, total });
     if (!room.firstFinish) { room.firstFinish = Date.now(); room.timers.push(setTimeout(() => endRace(room), FINISH_GRACE)); broadcast(room, { type: "grace", ms: FINISH_GRACE }); }
     checkRaceEnd(room);

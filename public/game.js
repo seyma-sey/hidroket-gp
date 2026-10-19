@@ -204,9 +204,18 @@ const TRACKS = {
   spa: { name: 'SPA', short: 'SPA', tw: 58, theme: 'spa',
     cp: [[760,1680],[520,1720],[360,1650],[400,1530],[590,1470],[760,1370],[830,1240],[790,1110],[880,900],[1030,650],
       [1180,420],[1290,280],[1450,290],[1490,420],[1610,500],[1720,630],[1650,780],[1500,760],[1410,880],[1380,1030],
-      [1460,1160],[1610,1210],[1740,1330],[1790,1510],[1690,1660],[1480,1740],[1200,1770],[1010,1740],[900,1700]] }
+      [1460,1160],[1610,1210],[1740,1330],[1790,1510],[1690,1660],[1480,1740],[1200,1770],[1010,1740],[900,1700]] },
+  monza: { name: 'MONZA', short: 'MONZA', tw: 56, theme: 'monza',
+    cp: [[250,1450],[250,1200],[250,950],[250,720],[267,620],[352,585],[381,520],[373,430],[417,300],[555,190],[758,140],[990,150],[1178,210],
+      [1294,250],[1338,310],[1425,330],[1599,350],[1744,410],[1802,510],[1787,610],[1700,700],[1483,820],[1222,960],[990,1080],
+      [874,1150],[801,1230],[714,1280],[656,1350],[642,1500],[642,1650],[613,1760],[468,1830],[308,1800],[257,1680]] },
+  baku: { name: 'BAKÜ', short: 'BAKÜ', tw: 44, theme: 'baku',
+    cp: [[826,1650],[1166,1650],[1506,1650],[1737,1648],[1825,1613],[1846,1525],[1846,1300],[1832,1200],[1750,1175],[1574,1175],[1492,1163],
+      [1465,1088],[1465,900],[1492,825],[1587,800],[1723,800],[1805,775],[1832,675],[1832,500],[1805,400],[1696,375],[1370,375],[1098,375],
+      [962,350],[880,275],[798,263],[744,325],[662,350],[581,300],[499,213],[390,200],[282,225],[227,325],[214,550],[200,863],[227,1175],
+      [309,1425],[445,1600],[608,1650]] }
 };
-const TRACK_KEYS = ['istanbul', 'monaco', 'spa'];
+const TRACK_KEYS = ['istanbul', 'monaco', 'spa', 'monza', 'baku'];
 const SPACING = 6;
 function centerline(cp) {
   const raw = [], n = cp.length;
@@ -278,8 +287,42 @@ const THEMES = {
       for (let i = 0; i < 1200; i++) { g.fillStyle = '#1f4f28'; g.fillRect(r() * TS | 0, r() * TS | 0, 3, 3); }
     },
     runoff: { col: '#cbbd8a', dot: ['#bfae78', '#e0d2a0'], band: null, surf: 'gravel' }
+  },
+  monza: {   // kraliyet parkı: biçilmiş çim, ağaçlar, çakıl kaçış alanları
+    sky: ['#3f8fe0', '#4b98e3', '#59a1e5', '#68aae7', '#79b4e9', '#8bbeea', '#9dc7ea', '#b0cfe8', '#c3d7e4', '#d4dddf'],
+    haze: 'rgba(212,221,223,', out: [0x4f, 0x8f, 0x3a],
+    ground(g, r) {
+      g.fillStyle = '#4f8f3a'; g.fillRect(0, 0, TS, TS);
+      g.fillStyle = '#58993f'; for (let x = 0; x < TS; x += 64) g.fillRect(x, 0, 32, TS);   // biçme şeritleri
+      for (let i = 0; i < 30000; i++) { g.fillStyle = r() < 0.5 ? '#457f33' : '#62a446'; g.fillRect(r() * TS | 0, r() * TS | 0, 2, 1); }
+      for (let i = 0; i < 700; i++) { g.fillStyle = r() < .6 ? '#3a6e2a' : '#c9c46a'; g.fillRect(r() * TS | 0, r() * TS | 0, 3, 2); }
+      // eski eğimli pistin (sopraelevata) kalıntısı
+      g.strokeStyle = '#8f9196'; g.lineWidth = 14; g.beginPath(); g.ellipse(1160, 560, 330, 150, -0.35, 0.3, 2.6); g.stroke();
+      g.strokeStyle = '#a6a8ad'; g.lineWidth = 3; g.stroke();
+    },
+    runoff: { col: '#cbbd8a', dot: ['#bfae78', '#e0d2a0'], band: null, surf: 'gravel' }
+  },
+  baku: {    // şehir pisti: duvarlar, taş sokaklar, Hazar kıyısı
+    sky: ['#3a6fb5', '#4a7cbb', '#5d89bf', '#7396c0', '#8ea2bd', '#aab0b6', '#c6b9a8', '#dbbd98', '#e8bb86', '#efb676'],
+    haze: 'rgba(232,196,150,', out: [0xb3, 0xa0, 0x82], walls: true, seaY: 1760,
+    ground(g, r) {
+      g.fillStyle = '#b3a082'; g.fillRect(0, 0, TS, TS);
+      for (let y = 0; y < TS; y += 6) for (let x = (y / 6 % 2) * 6; x < TS; x += 12) { g.fillStyle = r() < .5 ? '#a8957a' : '#bda98b'; g.fillRect(x, y, 11, 5); }
+      // eski şehir surları (İçerişehir)
+      g.fillStyle = '#8a7656'; g.fillRect(560, 420, 520, 14); g.fillRect(560, 420, 14, 260);
+      for (let x = 560; x < 1080; x += 20) g.fillRect(x, 412, 10, 8);
+      g.fillStyle = '#9c8866'; g.fillRect(600, 470, 440, 180);
+      for (let i = 0; i < 160; i++) { g.fillStyle = r() < .5 ? '#c9b28c' : '#7f6b4d'; g.fillRect(610 + r() * 420 | 0, 480 + r() * 160 | 0, 8, 6); }
+      // sahil bulvarı ve Hazar Denizi
+      g.fillStyle = '#5f8f4a'; g.fillRect(0, 1700, TS, 50);
+      g.fillStyle = '#7d7568'; g.fillRect(0, 1750, TS, 10);
+      g.fillStyle = '#2a6f9a'; g.fillRect(0, 1760, TS, TS - 1760);
+      for (let i = 0; i < 4000; i++) { g.fillStyle = r() < .6 ? '#347da8' : '#9fcbe0'; g.fillRect(r() * TS | 0, 1764 + r() * (TS - 1764) | 0, 3, 1); }
+    },
+    runoff: null
   }
 };
+THEMES.monaco.seaY = 1602;
 
 function useTrack(key) {
   if (!TRACKS[key]) key = 'istanbul';
@@ -300,7 +343,7 @@ function useTrack(key) {
   for (const off of [0.04, 0.08, 0.12, 0.92, 0.88, 0.16]) for (const side of [1, -1]) {
     if (WS) break; const i = Math.round(NS * off) % NS, d = TW / 2 + 78;
     const x = SX[i] + RNX(i) * side * d, y = SY[i] + RNY(i) * side * d;
-    if (clearAt(x, y, 70) && !(TH.walls && y > 1560)) { WS = { x, y }; WS_I = i; WS.side = side; }
+    if (clearAt(x, y, 70) && !(TH.seaY && y > TH.seaY - 42)) { WS = { x, y }; WS_I = i; WS.side = side; }
   }
   if (!WS) { WS_I = 0; WS = { x: SX[0] + RNX(0) * (TW / 2 + 78), y: SY[0] + RNY(0) * (TW / 2 + 78), side: 1 }; }
   ST_I = (NS - 18) % NS;
@@ -331,7 +374,7 @@ function buildTexture() {
   tg.fillStyle = '#b19385'; for (let x = -70; x < 70; x += 6) tg.fillRect(x, -50, 1, 70); for (let y = -50; y < 20; y += 6) tg.fillRect(-70, y, 140, 1);
   tg.fillStyle = '#9b9a92'; tg.fillRect(-60, -10, 120, 30); tg.restore();
   tg.lineJoin = 'round'; tg.lineCap = 'round';
-  if (TH.walls) {   // Monako: kaldırım + bariyer
+  if (TH.walls) {   // şehir pisti: kaldırım + bariyer
     path(); tg.lineWidth = TW + 34; tg.strokeStyle = '#a49d90'; tg.stroke();
     path(); tg.lineWidth = TW + 16; tg.strokeStyle = '#d9dde1'; tg.stroke();
     path(); tg.lineWidth = TW + 13; tg.strokeStyle = '#8a9198'; tg.stroke();
@@ -384,6 +427,48 @@ function buildPano() {
         x += w + (r() * 3 | 0); }
     }
     for (let i = 0; i < 14; i++) { const x = r() * PW | 0; g.fillStyle = '#f4f6f8'; g.fillRect(x, HY - 4, 7, 2); g.fillRect(x + 3, HY - 8, 1, 4); }
+  } else if (TK === 'monza') {
+    for (let k = 0; k < 9; k++) cloud(r() * PW, 4 + r() * 22, 30 + r() * 40, ['#ffffff', '#eef4fa', '#dfe9f2']);
+    // uzakta Alpler
+    for (let x = 0; x < PW; x++) { const a = x / PW * TAU; const h = Math.round(30 + 9 * Math.sin(a * 4 + 0.6) + 6 * Math.sin(a * 11) + 3 * Math.abs(Math.sin(a * 23)));
+      g.fillStyle = '#8ea7c4'; g.fillRect(x, HY - h, 1, h + 1);
+      const sn = Math.max(0, h - 30); if (sn) { g.fillStyle = '#f2f6fa'; g.fillRect(x, HY - h, 1, Math.min(sn, 5)); } }
+    g.fillStyle = 'rgba(212,221,223,.5)'; g.fillRect(0, HY - 20, PW, 20);
+    // eski eğimli pist duvarı
+    for (const [x0, x1] of [[120, 470], [880, 1230]]) {
+      for (let x = x0; x < x1; x++) { const t = (x - x0) / (x1 - x0), h = Math.round(6 + 12 * Math.sin(t * Math.PI));
+        g.fillStyle = '#9a9ca1'; g.fillRect(x, HY - h, 1, h); g.fillStyle = '#c4c6ca'; g.fillRect(x, HY - h, 1, 1); }
+      for (let x = x0 + 10; x < x1 - 10; x += 22) { g.fillStyle = '#7d7f84'; g.fillRect(x, HY - 6, 2, 6); } }
+    // yoğun park ağaçları
+    for (let x = 0; x < PW; x += 2) { if (x > 560 && x < 720) continue; const a = x / PW * TAU; const h = Math.round(9 + 3 * Math.sin(a * 17) + 2 * Math.sin(a * 41)) + (r() * 3 | 0);
+      g.fillStyle = r() < .5 ? '#2f6a2c' : '#3a7a32'; g.fillRect(x, HY - h, 2, h + 1); }
+    // tribün
+    g.fillStyle = '#c3ccd4'; g.fillRect(1290, HY - 18, 140, 18); g.fillStyle = '#d22f2a'; g.fillRect(1290, HY - 20, 140, 3);
+    for (let y = HY - 15; y < HY - 2; y += 3) for (let x = 1293; x < 1427; x += 2) { g.fillStyle = ['#d22f2a', '#f4f4f4', '#2f9a4a', '#ffd84a'][r() * 4 | 0]; g.fillRect(x, y, 1, 1); }
+  } else if (TK === 'baku') {
+    for (let k = 0; k < 5; k++) cloud(r() * PW, 8 + r() * 18, 20 + r() * 30, ['#f6dcc0', '#efcfae']);
+    for (let x = 0; x < PW; x++) { const a = x / PW * TAU; const h = Math.round(10 + 4 * Math.sin(a * 2 + 2) + 2 * Math.sin(a * 9));
+      g.fillStyle = '#a99478'; g.fillRect(x, HY - h, 1, h + 1); }
+    // Hazar kıyısı
+    g.fillStyle = '#2f6f98'; g.fillRect(0, HY - 6, 520, 7); g.fillRect(1440, HY - 6, PW - 1440, 7);
+    for (let i = 0; i < 160; i++) { g.fillStyle = r() < .5 ? '#4a88b0' : '#cfe3ee'; const x = r() < .5 ? r() * 520 : 1440 + r() * 96; g.fillRect(x | 0, HY - 6 + r() * 6 | 0, 2, 1); }
+    // şehir
+    for (let x = 740; x < 1430;) { const w = 6 + (r() * 9 | 0), h = 8 + (r() * 16 | 0);
+      g.fillStyle = ['#d9c7a3', '#cbb48e', '#e4d6bb', '#b9a07a'][r() * 4 | 0]; g.fillRect(x, HY - h, w, h + 1);
+      g.fillStyle = '#7b6a52'; for (let yy = HY - h + 3; yy < HY - 1; yy += 3) for (let xx = x + 1; xx < x + w - 1; xx += 2) g.fillRect(xx, yy, 1, 1);
+      x += w + (r() * 2 | 0); }
+    // Alev Kuleleri
+    const flame = (cx, h, w) => {
+      for (let y = 0; y < h; y++) { const t = y / h, ww = Math.max(1, Math.round(w * (1 - Math.pow(t, 1.8)))), lean = Math.round(t * t * 3);
+        g.fillStyle = (y % 4 === 0 && t > 0.3) ? '#ff9a3a' : t > 0.85 ? '#ffb24a' : '#3f72aa'; g.fillRect(cx - ww + lean, HY - 18 - y, ww * 2, 1);
+        g.fillStyle = '#7fb0dc'; g.fillRect(cx - ww + lean, HY - 18 - y, 1, 1); }
+    };
+    g.fillStyle = '#8f7f62'; for (let x = 1020; x < 1140; x++) { const h = Math.round(19 * Math.sin((x - 1020) / 120 * Math.PI) ** 0.5); g.fillRect(x, HY - h, 1, h); }
+    flame(1058, 40, 8); flame(1078, 50, 9); flame(1098, 36, 7);
+    // Kız Kulesi
+    g.fillStyle = '#c9b48a'; g.fillRect(1230, HY - 30, 12, 30); g.fillStyle = '#a8935f'; g.fillRect(1242, HY - 24, 5, 24);
+    for (let y = HY - 28; y < HY - 2; y += 4) { g.fillStyle = '#8a7650'; g.fillRect(1233, y, 6, 1); }
+    g.fillStyle = '#8a7650'; for (let x = 1229; x < 1243; x += 3) g.fillRect(x, HY - 32, 2, 2);
   } else {   // İstanbul
     for (let k = 0; k < 6; k++) cloud(r() * PW, 8 + r() * 20, 20 + r() * 40, ['#fbe9cf', '#f4dcbc']);
     for (let x = 0; x < PW; x++) { const a = x / PW * TAU; const h = Math.round(13 + 5 * Math.sin(a * 3) + 3 * Math.sin(a * 7 + 1));
@@ -404,7 +489,7 @@ function buildPano() {
       g.fillStyle = '#4c6a3a'; g.fillRect(x, HY - h, 2, h); g.fillRect(x - 1, HY - h + 2, 4, h - 4); }
   }
   g.imageSmoothingEnabled = true; g.drawImage(workshop, 640 - 72, HY - 72, 144, 75); g.imageSmoothingEnabled = false;
-  if (TK !== 'monaco') for (let x = 0; x < PW; x += 5 + (r() * 6 | 0)) { if (x > 560 && x < 720) continue; if (TK === 'istanbul' && x > 860 && x < 1400) continue;
+  if (!TH.walls && TK !== 'monza') for (let x = 0; x < PW; x += 5 + (r() * 6 | 0)) { if (x > 560 && x < 720) continue; if (TK === 'istanbul' && x > 860 && x < 1400) continue;
     const h = 6 + r() * (TK === 'spa' ? 16 : 10) | 0, w = Math.ceil(h * 0.3);
     for (let y = 0; y < h; y++) { const ww = Math.round(y / h * w); g.fillStyle = TK === 'spa' ? '#173f27' : '#3d5a2e'; g.fillRect(x - ww, HY - h + y + 1, ww * 2 + 1, 1); } }
   pano = c;
@@ -415,21 +500,24 @@ function buildObjects() {
   const r = rng(21 + TK.length * 13);
   const farFromTrack = (x, y, m) => { for (let i = 0; i < NS; i += 3) { const d = sq(x - SX[i]) + sq(y - SY[i]); const lim = TW / 2 + m + (GRAV[i] && TH.runoff ? 46 : 0); if (d < lim * lim) return false; } return true; };
   const awayFromBuildings = (x, y) => Math.hypot(x - WS.x, y - WS.y) > 110 && Math.hypot(x - STAND.x, y - STAND.y) > 70;
-  if (TK === 'monaco') {
+  if (TH.walls) {
+    const palm = TK === 'baku' ? 0.3 : 0.22;
     for (let i = 0; i < NS; i += 6) for (const side of [-1, 1]) {
       const d = TW / 2 + 28 + r() * 10, x = SX[i] + RNX(i) * side * d, y = SY[i] + RNY(i) * side * d;
-      if (y > 1570 || !awayFromBuildings(x, y) || !farFromTrack(x, y, 22)) continue;
-      if (r() < 0.22) addObj({ x, y, img: imgPalm, ww: 22, r: 0 });
+      if (y > TH.seaY - 32 || !awayFromBuildings(x, y) || !farFromTrack(x, y, 22)) continue;
+      if (TK === 'baku' && x > 600 && x < 1040 && y > 440 && y < 660) continue;   // İçerişehir
+      if (r() < palm) addObj({ x, y, img: imgPalm, ww: 22, r: 0 });
       else addObj({ x, y, img: BUILDINGS[r() * BUILDINGS.length | 0], ww: 30 + r() * 12, r: 0 });
     }
-    for (let i = 0; i < 40; i++) addObj({ x: 60 + r() * (TS - 120), y: 1660 + r() * 330, img: imgYacht, ww: 26 + r() * 10, r: 0 });
+    for (let i = 0; i < (TK === 'baku' ? 14 : 40); i++) addObj({ x: 60 + r() * (TS - 120), y: TH.seaY + 58 + r() * (TS - TH.seaY - 90), img: imgYacht, ww: 26 + r() * 10, r: 0 });
   } else {
-    const n = TK === 'spa' ? 420 : 170;
+    const n = TK === 'spa' ? 420 : TK === 'monza' ? 360 : 170;
     for (let t = 0; t < 2400 && objs.length < n; t++) {
       const x = 60 + r() * (TS - 120), y = 60 + r() * (TS - 120);
       if (!awayFromBuildings(x, y) || !farFromTrack(x, y, 26)) continue;
       const k = r();
       if (TK === 'spa') addObj(k < 0.6 ? { x, y, img: imgDarkPine, ww: 26, r: 4 } : k < 0.9 ? { x, y, img: imgPine, ww: 24, r: 4 } : { x, y, img: imgPine2, ww: 20, r: 4 });
+      else if (TK === 'monza') addObj(k < 0.4 ? { x, y, img: imgPine2, ww: 22, r: 4 } : k < 0.75 ? { x, y, img: imgPoplar, ww: 16, r: 3 } : { x, y, img: imgAutumn, ww: 26, r: 4 });
       else addObj(k < 0.45 ? { x, y, img: imgCypress, ww: 12, r: 3 } : k < 0.8 ? { x, y, img: imgPoplar, ww: 14, r: 3 } : { x, y, img: imgAutumn, ww: 24, r: 4 });
     }
     for (let i = 0; i < NS; i += 7) if (GRAV[i] && GRAV[(i + 7) % NS]) { const side = -Math.sign(KV[i]) || 1, d = TW / 2 + 47;
@@ -437,7 +525,7 @@ function buildObjects() {
   }
   for (let i = 40; i < NS; i += Math.floor(NS / 10)) { const side = (i / 7 | 0) % 2 ? 1 : -1; const d = TW / 2 + (TH.walls ? 9 : 16);
     if (GRAV[i] && TH.runoff && side === -Math.sign(KV[i])) continue;
-    const x = SX[i] + RNX(i) * side * d, y = SY[i] + RNY(i) * side * d; if (TH.walls && y > 1570) continue;
+    const x = SX[i] + RNX(i) * side * d, y = SY[i] + RNY(i) * side * d; if (TH.seaY && y > TH.seaY - 32) continue;
     addObj({ x, y, img: imgBanner, ww: 30, r: TH.walls ? 0 : 3 }); }
   addObj({ x: WS.x, y: WS.y, img: workshop, ww: 96, r: 34 });
   addObj({ x: STAND.x, y: STAND.y, img: imgStand, ww: 80, r: 26 });
@@ -518,10 +606,11 @@ function stepCar(c, inp, dt) {
   if (vf > top) vf -= (vf - top) * 2.2 * dt;
   const spd = Math.abs(vf);
   const steerEff = Math.min(1, spd / 45) * (1 - 0.32 * Math.min(1, spd / st.top));
-  c.av = inp.steer * st.turn * steerEff * (vf < -2 ? -1 : 1);
+  // turboda hız %35 artıyor; direksiyon da güçlenmezse dönüş yarıçapı açılıp araç viraja giremiyordu
+  c.av = inp.steer * st.turn * steerEff * (c.turboOn ? 1.3 : 1) * (vf < -2 ? -1 : 1);
   if (c.spinT > 0) c.av = c.spinDir * 9;
   c.a = wrapA(c.a + c.av * dt);
-  let grip = st.grip * sf.grip * (c.turboOn ? 0.85 : 1) * (inp.thr > 0.5 && Math.abs(inp.steer) > 0.6 && spd > st.top * 0.7 ? 0.6 : 1);
+  let grip = st.grip * sf.grip * (!c.turboOn && inp.thr > 0.5 && Math.abs(inp.steer) > 0.6 && spd > st.top * 0.7 ? 0.6 : 1);
   if (c.spinT > 0) grip *= 0.25;
   vl *= Math.exp(-grip * dt);
   c.vx = fx * vf + rxv * vl; c.vy = fy * vf + ryv * vl;
@@ -620,7 +709,7 @@ let race = Object.assign({ seed: 1 }, CFG_DEF);
 function flash(t, col = '#ffd84a') { msg = t; msgT = 2.2; msgCol = col; }
 function pushFeed(t, col = '#e6eef5') { feed.push({ t, col, life: 5 }); if (feed.length > 4) feed.shift(); }
 function playerName() { return ($('name').value || '').trim().slice(0, 14); }
-const pickTrack = k => k === 'random' ? TRACK_KEYS[Math.random() * 3 | 0] : (TRACKS[k] ? k : 'istanbul');
+const pickTrack = k => k === 'random' ? TRACK_KEYS[Math.random() * TRACK_KEYS.length | 0] : (TRACKS[k] ? k : 'istanbul');
 
 function startPractice() {
   initAudio(); mode = 'practice';
@@ -1144,6 +1233,7 @@ function renderRoom() {
   if (!live && room.cfg && room.cfg.track !== 'random' && state === 'room') useTrack(room.cfg.track);
 }
 let lbTab = 'laps', lbTrack = 'istanbul';
+const OBST_NAMES = ['ENGELSİZ', 'AZ', 'NORMAL', 'ÇOK'];
 function renderBoard() {
   for (const b of document.querySelectorAll('#lbTracks .tab')) b.setAttribute('aria-selected', String(b.dataset.t === lbTrack));
   const list = (boardFor(lbTrack)[lbTab] || []).slice(0, 10), tb = $('lb').tBodies[0]; tb.textContent = '';
@@ -1153,7 +1243,7 @@ function renderBoard() {
     const c = CARK[r.car] || CARS[0];
     const td = (t, cls) => { const d = document.createElement('td'); if (cls) d.className = cls; d.textContent = t; return d; };
     const carTd = td(''); const sw = document.createElement('span'); sw.className = 'sw'; sw.style.background = c.col; carTd.append(sw, document.createTextNode(c.name));
-    tr.append(td(String(i + 1), 'r'), td(r.name), carTd, td(fmt2(r.time), 't'));
+    tr.append(td(String(i + 1), 'r'), td(r.name), carTd, td(r.obst == null ? '—' : OBST_NAMES[r.obst] || '—', 'ob o' + r.obst), td(fmt2(r.time), 't'));
     tb.append(tr);
   });
   $('lbEmpty').hidden = list.length > 0;
@@ -1308,6 +1398,9 @@ function xp() {
 }
 $('brandPill').addEventListener('click', xp);
 let autoGas = store.get('hgp-autogas', false);
+let turboLatch = store.get('hgp-tlatch', false), latched = false;
+$('turboLatch').checked = turboLatch;
+$('turboLatch').onchange = () => { turboLatch = $('turboLatch').checked; store.set('hgp-tlatch', turboLatch); };
 $('autoGas').checked = autoGas;
 $('autoGas').onchange = () => { autoGas = $('autoGas').checked; store.set('hgp-autogas', autoGas); };
 const keys = {};
@@ -1322,18 +1415,24 @@ function togglePause() {
   if (mode !== 'practice') { if (state === 'race') flash('ONLINE YARIŞTA DURAKLATMA YOK', '#ff6a5e'); return; }
   if (state === 'race' || state === 'count' || state === 'finish') { prevState = state; state = 'paused'; } else if (state === 'paused') state = prevState;
 }
+// fiziksel tuş konumuna göre oku (Shift basılıyken harfler/Türkçe F klavye fark etmesin)
+const CODEK = { KeyW: 'w', KeyA: 'a', KeyS: 's', KeyD: 'd', KeyE: 'e', KeyQ: 'q', KeyX: 'x', KeyP: 'p', Space: ' ', ShiftLeft: 'shift', ShiftRight: 'shift',
+  ArrowUp: 'arrowup', ArrowDown: 'arrowdown', ArrowLeft: 'arrowleft', ArrowRight: 'arrowright', Digit3: '3', Digit6: '6', Numpad3: '3', Numpad6: '6' };
+const keyName = e => CODEK[e.code] || (e.key || '').toLowerCase();
 addEventListener('keydown', e => {
   if (drawerOpen()) { if (e.key === 'Escape') closeDrawers(); return; }
   const tag = (e.target.tagName || '').toLowerCase();
   if (tag === 'input' || tag === 'select' || tag === 'textarea') return;
-  const k = e.key.toLowerCase();
+  const k = keyName(e);
   const inGame = state === 'race' || state === 'count' || state === 'finish' || state === 'paused';
   if (inGame && ['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(k)) e.preventDefault();
-  if (tag === 'button' && (k === 'enter' || k === ' ')) return;
+  if (inGame && k !== 'enter') { if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur(); }
+  else if (tag === 'button' && (k === 'enter' || k === ' ')) return;
   if (!e.repeat) {
     if (k === 'enter') confirmAction();
     if (k === 'escape' || k === 'p') togglePause();
     if ((k === 'e' || k === 'x' || k === 'q') && me && inGame) useItem(me);
+    if ((k === ' ' || k === 'shift') && turboLatch && state === 'race') latched = !latched;
     if (k === '3') _x.k3 = performance.now();
     if (k === '6' && performance.now() - _x.k3 < 600) xw();
     if ((state === 'menu' || state === 'room') && (k === 'arrowleft' || k === 'arrowright')) {
@@ -1342,7 +1441,7 @@ addEventListener('keydown', e => {
   }
   keys[k] = true;
 });
-addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+addEventListener('keyup', e => { keys[keyName(e)] = false; keys[e.key.toLowerCase()] = false; });
 addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
 cv.addEventListener('pointerdown', e => {
   initAudio(); if (state === 'results' || state === 'paused') confirmAction();
@@ -1371,7 +1470,11 @@ function readInput() {
   const kS = (keys.arrowright || keys.d ? 1 : 0) - (keys.arrowleft || keys.a ? 1 : 0);
   const kT = (keys.arrowup || keys.w ? 1 : 0) - (keys.arrowdown || keys.s ? 1 : 0);
   const tS = (coarse && ctlMode === 'tilt' && tilt.on) ? tilt.steer : 0;
-  const turbo = !!(keys[' '] || keys.shift || (joy.ok && joy.b));
+  const kTurbo = !!(keys[' '] || keys.shift);
+  if (turboLatch) {   // tek basışla aç/kapat (keydown'da çevrilir): bazı klavyeler ↑+←+Space'i aynı anda okuyamıyor
+    if (latched && (keys.arrowdown || keys.s || (me && me.turbo <= 0 && me.boostT <= 0) || state !== 'race')) latched = false;
+  } else latched = false;
+  const turbo = !!((turboLatch ? latched : kTurbo) || (joy.ok && joy.b));
   let thr = clamp1(kT + (joy.ok ? joy.y : 0));
   if (coarse && autoGas && !keys.arrowdown) thr = Math.max(thr, 1);     // otomatik gaz
   if (turbo && thr > -0.3) thr = 1;                                     // H2 basılıyken gaz da basılı sayılır
@@ -1614,6 +1717,6 @@ async function init() {
 }
 window.__hgp = { get state() { return state; }, get room() { return room; }, get me() { return me; }, get cars() { return cars; }, get board() { return board; },
   get myId() { return myId; }, get race() { return race; }, get NS() { return NS; }, get tex() { return tc; }, send, chooseCar, useTrack, useItem, startPractice,
-  setPcfg(c) { pcfg = Object.assign({}, pcfg, c); }, get haz() { return haz; }, get obst() { return obst; }, get boxes() { return boxes; } };
+  setPcfg(c) { pcfg = Object.assign({}, pcfg, c); }, get haz() { return haz; }, get obst() { return obst; }, get boxes() { return boxes; }, get pano() { return pano; } };
 init();
 })();
