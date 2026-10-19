@@ -1112,7 +1112,6 @@ function drawResults() {
 }
 function drawAttractHUD() {
   logoBadge(ctx, 4, 4);
-  if (_x.blink && performance.now() - _x.blink < 700) { ctx.strokeStyle = _x.on ? '#5fd16b' : '#ff6a5e'; ctx.lineWidth = 2; ctx.strokeRect(3, 3, 80, 17); }
   if (spec.size) { ctx.fillStyle = '#d22f2a'; ctx.fillRect(4, 22, 60, 12); txt('CANLI', 34, 24, '#ffffff', 8, 'center', false); }
   else if (TK) txt(TRACKS[TK].name, 6, 24, '#ffffff', 8);
 }
@@ -1374,29 +1373,6 @@ function onMsg(m) {
    GİRDİ
    ========================================================= */
 const BOT = params.has('bot');
-const _x = { on: store.get('hgp-ui2', false), k3: 0, taps: [], pill: [], last: 0 };
-function xt() {
-  const now = performance.now(); _x.taps = _x.taps.filter(t => now - t < 900); _x.taps.push(now);
-  if (_x.taps.length >= 3) { _x.taps = []; xw(); }
-}
-function xw() {
-  if (!_x.on || !me || state !== 'race' || me.finished) return;
-  const now = performance.now(); if (now - _x.last < 10000) return; _x.last = now;
-  const i = (me.idx + Math.floor(NS * 0.08)) % NS, sp = Math.max(Math.abs(speedF(me)), 80);
-  for (let k = 0; k < 14; k++) particles.push({ x: me.x + (Math.random() - .5) * 10, y: me.y + (Math.random() - .5) * 10, life: 0.6, max: 0.6, col: k % 2 ? '#c792ea' : '#ffffff' });
-  me.x = SX[i]; me.y = SY[i]; me.a = Math.atan2(TY[i], TX[i]); me.vx = Math.cos(me.a) * sp; me.vy = Math.sin(me.a) * sp; me.spinT = 0;
-  camA = me.a;
-  for (let k = 0; k < 14; k++) particles.push({ x: me.x + (Math.random() - .5) * 10, y: me.y + (Math.random() - .5) * 10, life: 0.6, max: 0.6, col: k % 2 ? '#c792ea' : '#ffffff' });
-  sfx('turbo');
-}
-function xp() {
-  const now = performance.now(); _x.pill = _x.pill.filter(t => now - t < 2000); _x.pill.push(now);
-  if (_x.pill.length >= 5) {
-    _x.pill = []; _x.on = !_x.on; store.set('hgp-ui2', _x.on); _x.blink = now;
-    const b = $('brandPill'); b.style.outline = '3px solid ' + (_x.on ? '#5fd16b' : '#ff6a5e'); setTimeout(() => b.style.outline = '', 700);
-  }
-}
-$('brandPill').addEventListener('click', xp);
 let autoGas = store.get('hgp-autogas', false);
 let turboLatch = store.get('hgp-tlatch', false), latched = false;
 $('turboLatch').checked = turboLatch;
@@ -1417,7 +1393,7 @@ function togglePause() {
 }
 // fiziksel tuş konumuna göre oku (Shift basılıyken harfler/Türkçe F klavye fark etmesin)
 const CODEK = { KeyW: 'w', KeyA: 'a', KeyS: 's', KeyD: 'd', KeyE: 'e', KeyQ: 'q', KeyX: 'x', KeyP: 'p', Space: ' ', ShiftLeft: 'shift', ShiftRight: 'shift',
-  ArrowUp: 'arrowup', ArrowDown: 'arrowdown', ArrowLeft: 'arrowleft', ArrowRight: 'arrowright', Digit3: '3', Digit6: '6', Numpad3: '3', Numpad6: '6' };
+  ArrowUp: 'arrowup', ArrowDown: 'arrowdown', ArrowLeft: 'arrowleft', ArrowRight: 'arrowright' };
 const keyName = e => CODEK[e.code] || (e.key || '').toLowerCase();
 addEventListener('keydown', e => {
   if (drawerOpen()) { if (e.key === 'Escape') closeDrawers(); return; }
@@ -1433,8 +1409,6 @@ addEventListener('keydown', e => {
     if (k === 'escape' || k === 'p') togglePause();
     if ((k === 'e' || k === 'x' || k === 'q') && me && inGame) useItem(me);
     if ((k === ' ' || k === 'shift') && turboLatch && state === 'race') latched = !latched;
-    if (k === '3') _x.k3 = performance.now();
-    if (k === '6' && performance.now() - _x.k3 < 600) xw();
     if ((state === 'menu' || state === 'room') && (k === 'arrowleft' || k === 'arrowright')) {
       const i = CARS.findIndex(c => c.key === selCar); chooseCar(CARS[(i + (k === 'arrowright' ? 1 : 3)) % 4].key);
     }
@@ -1446,8 +1420,6 @@ addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
 cv.addEventListener('pointerdown', e => {
   initAudio(); if (state === 'results' || state === 'paused') confirmAction();
   const r = cv.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * W, y = (e.clientY - r.top) / r.height * H;
-  if (x < 84 && y < 22 && state === 'race') xt();
-  if (x < 84 && y < 22 && (state === 'menu' || state === 'room')) xp();
 });
 // dokunmatik: her parmak hangi tuşun üstündeyse o basılı sayılır; parmağı kaldırmadan tuştan tuşa kaydırılabilir
 const touchBtns = [...document.querySelectorAll('#touch button[data-k]')];
@@ -1508,7 +1480,6 @@ function handleLine(line) {
   lines++; joy.rawX = x; joy.rawY = y;
   if (calib.active) { calib.sx += x; calib.sy += y; calib.n++; if (calib.n >= 15) { cal.cx = calib.sx / calib.n; cal.cy = calib.sy / calib.n; calib.active = false; joy.ok = true; setStatus('ok', 'Bağlı. Joystick merkezi ayarlandı, oynamaya hazır.'); } return; }
   joy.x = norm(x, cal.cx) * (invX.checked ? -1 : 1); joy.y = -norm(y, cal.cy) * (invY.checked ? -1 : 1);
-  if (b && !joy.b && state === 'race') xt();
   if (b && !joy.b && state !== 'race' && state !== 'finish') confirmAction();
   else if (b && !joy.b && me && me.item && state === 'race') useItem(me);
   joy.b = b;
