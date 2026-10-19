@@ -10,8 +10,8 @@ const { EventEmitter } = require("events");
 const PORT = Number(process.env.PORT) || 3000;
 const PUBLIC = path.join(__dirname, "public");
 const DATA_FILE = path.join(__dirname, "data", "leaderboard.json");
-const UPSTASH_URL = process.env.UPSTASH_REDIS_REST_URL || "";
-const UPSTASH_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN || "";
+const UPSTASH_URL = (process.env.UPSTASH_REDIS_REST_URL || "").trim().replace(/\/+$/, "").replace(/^"|"$/g, "");
+const UPSTASH_TOKEN = (process.env.UPSTASH_REDIS_REST_TOKEN || "").trim().replace(/^"|"$/g, "");
 const LB_KEY = "hidroket-gp-leaderboard";
 
 const TRACKS = ["istanbul", "monaco", "spa"];

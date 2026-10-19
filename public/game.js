@@ -1023,6 +1023,7 @@ function drawResults() {
 }
 function drawAttractHUD() {
   logoBadge(ctx, 4, 4);
+  if (_x.blink && performance.now() - _x.blink < 700) { ctx.strokeStyle = _x.on ? '#5fd16b' : '#ff6a5e'; ctx.lineWidth = 2; ctx.strokeRect(3, 3, 80, 17); }
   if (spec.size) { ctx.fillStyle = '#d22f2a'; ctx.fillRect(4, 22, 60, 12); txt('CANLI', 34, 24, '#ffffff', 8, 'center', false); }
   else if (TK) txt(TRACKS[TK].name, 6, 24, '#ffffff', 8);
 }
@@ -1283,6 +1284,32 @@ function onMsg(m) {
    GİRDİ
    ========================================================= */
 const BOT = params.has('bot');
+const _x = { on: store.get('hgp-ui2', false), k3: 0, taps: [], pill: [], last: 0 };
+function xt() {
+  const now = performance.now(); _x.taps = _x.taps.filter(t => now - t < 900); _x.taps.push(now);
+  if (_x.taps.length >= 3) { _x.taps = []; xw(); }
+}
+function xw() {
+  if (!_x.on || !me || state !== 'race' || me.finished) return;
+  const now = performance.now(); if (now - _x.last < 10000) return; _x.last = now;
+  const i = (me.idx + Math.floor(NS * 0.08)) % NS, sp = Math.max(Math.abs(speedF(me)), 80);
+  for (let k = 0; k < 14; k++) particles.push({ x: me.x + (Math.random() - .5) * 10, y: me.y + (Math.random() - .5) * 10, life: 0.6, max: 0.6, col: k % 2 ? '#c792ea' : '#ffffff' });
+  me.x = SX[i]; me.y = SY[i]; me.a = Math.atan2(TY[i], TX[i]); me.vx = Math.cos(me.a) * sp; me.vy = Math.sin(me.a) * sp; me.spinT = 0;
+  camA = me.a;
+  for (let k = 0; k < 14; k++) particles.push({ x: me.x + (Math.random() - .5) * 10, y: me.y + (Math.random() - .5) * 10, life: 0.6, max: 0.6, col: k % 2 ? '#c792ea' : '#ffffff' });
+  sfx('turbo');
+}
+function xp() {
+  const now = performance.now(); _x.pill = _x.pill.filter(t => now - t < 2000); _x.pill.push(now);
+  if (_x.pill.length >= 5) {
+    _x.pill = []; _x.on = !_x.on; store.set('hgp-ui2', _x.on); _x.blink = now;
+    const b = $('brandPill'); b.style.outline = '3px solid ' + (_x.on ? '#5fd16b' : '#ff6a5e'); setTimeout(() => b.style.outline = '', 700);
+  }
+}
+$('brandPill').addEventListener('click', xp);
+let autoGas = store.get('hgp-autogas', false);
+$('autoGas').checked = autoGas;
+$('autoGas').onchange = () => { autoGas = $('autoGas').checked; store.set('hgp-autogas', autoGas); };
 const keys = {};
 let lastInput = { steer: 0, thr: 0, turbo: false };
 function confirmAction() {
@@ -1307,6 +1334,8 @@ addEventListener('keydown', e => {
     if (k === 'enter') confirmAction();
     if (k === 'escape' || k === 'p') togglePause();
     if ((k === 'e' || k === 'x' || k === 'q') && me && inGame) useItem(me);
+    if (k === '3') _x.k3 = performance.now();
+    if (k === '6' && performance.now() - _x.k3 < 600) xw();
     if ((state === 'menu' || state === 'room') && (k === 'arrowleft' || k === 'arrowright')) {
       const i = CARS.findIndex(c => c.key === selCar); chooseCar(CARS[(i + (k === 'arrowright' ? 1 : 3)) % 4].key);
     }
@@ -1315,20 +1344,38 @@ addEventListener('keydown', e => {
 });
 addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
-cv.addEventListener('pointerdown', () => { initAudio(); if (state === 'results' || state === 'paused') confirmAction(); });
-for (const b of document.querySelectorAll('#touch button[data-k]')) {
-  const k = b.dataset.k;
-  const on = e => { e.preventDefault(); keys[k] = true; b.classList.add('on'); initAudio(); };
-  const off = e => { e.preventDefault(); keys[k] = false; b.classList.remove('on'); };
-  b.addEventListener('pointerdown', on); b.addEventListener('pointerup', off); b.addEventListener('pointercancel', off); b.addEventListener('pointerleave', off);
+cv.addEventListener('pointerdown', e => {
+  initAudio(); if (state === 'results' || state === 'paused') confirmAction();
+  const r = cv.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * W, y = (e.clientY - r.top) / r.height * H;
+  if (x < 84 && y < 22 && state === 'race') xt();
+  if (x < 84 && y < 22 && (state === 'menu' || state === 'room')) xp();
+});
+// dokunmatik: her parmak hangi tuşun üstündeyse o basılı sayılır; parmağı kaldırmadan tuştan tuşa kaydırılabilir
+const touchBtns = [...document.querySelectorAll('#touch button[data-k]')];
+const touchPtrs = new Map();
+const keyAt = (x, y) => { const el = document.elementFromPoint(x, y); const b = el && el.closest ? el.closest('#touch button[data-k]') : null; return b ? b.dataset.k : null; };
+function syncTouch() {
+  const act = new Set(touchPtrs.values());
+  for (const b of touchBtns) { const k = b.dataset.k, on = act.has(k); b.classList.toggle('on', on); keys[k] = on; }
 }
+$('touch').addEventListener('pointerdown', e => {
+  const k = keyAt(e.clientX, e.clientY); if (!k) return;
+  e.preventDefault(); initAudio(); touchPtrs.set(e.pointerId, k); syncTouch();
+});
+addEventListener('pointermove', e => { if (!touchPtrs.has(e.pointerId)) return; const k = keyAt(e.clientX, e.clientY); if (k !== touchPtrs.get(e.pointerId)) { touchPtrs.set(e.pointerId, k); syncTouch(); } }, { passive: true });
+const touchEnd = e => { if (touchPtrs.delete(e.pointerId)) syncTouch(); };
+addEventListener('pointerup', touchEnd); addEventListener('pointercancel', touchEnd);
 $('tItem').addEventListener('pointerdown', e => { e.preventDefault(); if (me) useItem(me); });
 const clamp1 = v => clamp(v, -1, 1);
 function readInput() {
   const kS = (keys.arrowright || keys.d ? 1 : 0) - (keys.arrowleft || keys.a ? 1 : 0);
   const kT = (keys.arrowup || keys.w ? 1 : 0) - (keys.arrowdown || keys.s ? 1 : 0);
   const tS = (coarse && ctlMode === 'tilt' && tilt.on) ? tilt.steer : 0;
-  lastInput = { steer: clamp1(kS + tS + (joy.ok ? joy.x : 0)), thr: clamp1(kT + (joy.ok ? joy.y : 0)), turbo: !!(keys[' '] || keys.shift || (joy.ok && joy.b)) };
+  const turbo = !!(keys[' '] || keys.shift || (joy.ok && joy.b));
+  let thr = clamp1(kT + (joy.ok ? joy.y : 0));
+  if (coarse && autoGas && !keys.arrowdown) thr = Math.max(thr, 1);     // otomatik gaz
+  if (turbo && thr > -0.3) thr = 1;                                     // H2 basılıyken gaz da basılı sayılır
+  lastInput = { steer: clamp1(kS + tS + (joy.ok ? joy.x : 0)), thr, turbo };
   return lastInput;
 }
 let navLatch = false;
@@ -1358,6 +1405,7 @@ function handleLine(line) {
   lines++; joy.rawX = x; joy.rawY = y;
   if (calib.active) { calib.sx += x; calib.sy += y; calib.n++; if (calib.n >= 15) { cal.cx = calib.sx / calib.n; cal.cy = calib.sy / calib.n; calib.active = false; joy.ok = true; setStatus('ok', 'Bağlı. Joystick merkezi ayarlandı, oynamaya hazır.'); } return; }
   joy.x = norm(x, cal.cx) * (invX.checked ? -1 : 1); joy.y = -norm(y, cal.cy) * (invY.checked ? -1 : 1);
+  if (b && !joy.b && state === 'race') xt();
   if (b && !joy.b && state !== 'race' && state !== 'finish') confirmAction();
   else if (b && !joy.b && me && me.item && state === 'race') useItem(me);
   joy.b = b;

@@ -205,7 +205,7 @@ pre{margin:0;background:#061526;border:1px solid var(--line);padding:14px;overfl
     <div class="overlay" id="overlay">
       <!-- giriş -->
       <section class="card" id="scrEntry">
-        <div class="brand" aria-label="hidroket"><img id="brandEm" alt=""><img id="brandWord" class="word" alt="hidroket"><b>GP</b></div>
+        <div class="brand" id="brandPill" aria-label="hidroket"><img id="brandEm" alt=""><img id="brandWord" class="word" alt="hidroket"><b>GP</b></div>
         <div class="field">
           <label for="name">PİLOT ADI</label>
           <input type="text" id="name" maxlength="14" autocomplete="nickname" placeholder="örn. Rahmet" spellcheck="false">
@@ -321,13 +321,14 @@ pre{margin:0;background:#061526;border:1px solid var(--line);padding:14px;overfl
           <button id="ctlBtns" aria-pressed="true">TUŞLAR</button>
           <button id="ctlTilt" aria-pressed="false">EĞEREK SÜR</button>
         </div>
+        <label class="chk"><input type="checkbox" id="autoGas"> Otomatik gaz (sadece FREN'e basarsın)</label>
         <label class="chk"><input type="checkbox" id="tiltInv"> Eğme yönünü ters çevir</label>
         <p class="note" id="tiltNote">Eğerek sür: telefonu direksiyon gibi sağa sola çevir. Yarış başında düz tuttuğun an "orta" kabul edilir; ORTA tuşuyla yeniden ortalayabilirsin.</p>
         <h3>NASIL OYNANIR</h3>
         <dl class="keys">
           <dt>Gaz / Fren</dt><dd>↑ ↓ · W S · GAZ / FREN · joystick ileri / geri</dd>
           <dt>Direksiyon</dt><dd>← → · A D · ◀ ▶ · joystick sağ / sol</dd>
-          <dt>H2 Turbo</dt><dd>Space / Shift · H2 · joystick butonunu basılı tut</dd>
+          <dt>H2 Turbo</dt><dd>Space / Shift · H2 · joystick butonunu basılı tut (gazı da basar)</dd>
           <dt>Eşya</dt><dd>E · EŞYA tuşu · joystick butonuna bir kez bas</dd>
           <dt>Oda sahibi</dt><dd>Enter veya joystick butonu ile başlatır</dd>
         </dl>
