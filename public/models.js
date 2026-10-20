@@ -23,174 +23,185 @@ const x8 = u => Math.round(u * 48);
    paint(u, v, z, c) → renk (0xRRGGBB)
    c = { belt, top, h, isTop, upper, side }  */
 const SPEC = {
+  /* TUR-AZ (36): 4 tekerlekli şehir aracı. Alçak burun, uzun eğimli ön cam, yüksek ve yuvarlak arka.
+     Üst gövde mavi, alt gövde ve burun gümüş, kaputta mavi V, arka çamurlukta beyaz çapraz şeritler. */
   turaz: {
     W: 20, H: 19, clear: 2,
-    hw: u => kp([[0, .80], [.05, .93], [.18, 1], [.72, 1], [.9, .9], [1, .66]], u),
-    belt: u => kp([[0, 9.5], [.08, 10.5], [.5, 10.5], [.72, 9.6], [.86, 8.2], [.96, 6.6], [1, 5.2]], u),
-    top: u => kp([[0, 9.5], [.03, 12.8], [.12, 15.4], [.28, 16.8], [.42, 16.4], [.56, 14.2], [.72, 10.4], [.86, 8.6], [1, 5.2]], u),
-    cw: .8, nLow: 3.2, nUp: 2.2,
+    hw: u => kp([[0, .8], [.05, .93], [.15, 1], [.75, 1], [.9, .93], [1, .7]], u),
+    belt: u => kp([[0, 10], [.06, 11.2], [.45, 11], [.62, 10.4], [.8, 8.6], [.92, 7.2], [1, 5.6]], u),
+    top: u => kp([[0, 10], [.03, 13.6], [.1, 15.6], [.25, 16.8], [.42, 16.6], [.52, 15.4], [.66, 12], [.8, 9.2], [.92, 7.4], [1, 5.6]], u),
+    cw: .82, nLow: 3.4, nUp: 2.4,
     paint(u, v, z, c) {
-      const av = Math.abs(v);
-      // farlar ve stoplar
-      if (u > .955 && z >= 4.5 && z <= 6.5 && av > .42 && av < .86) return 0xfff6d8;
-      if (u > .955 && z >= 4.5 && z <= 6.5 && av >= .86) return 0x9aa3ad;
-      if (u < .04 && z >= 8 && z <= 10 && av > .45 && av < .9) return 0xe8322a;
-      // camlar
+      const av = Math.abs(v), BL = 0x2a9be0, SV = 0xb9c2ca;
+      if (u > .965 && z >= 5.4 && z <= 7 && av > .5 && av < .86) return 0xfdf6dc;                  // farlar
+      if (u < .035 && z >= 9 && z <= 10.6 && av > .42 && av < .82) return 0xe8322a;                  // stoplar
+      if (u < .035 && z >= 3 && z <= 4 && av < .5) return 0x2b2f34;                                    // arka tampon gölgesi
       if (c.upper) {
-        if (u >= .56 && u <= .73 && av < .8 && c.isTop) return (u > .62 && u < .65) ? 0x7fa9c4 : 0x24485f;      // ön cam
-        if (!c.isTop && u >= .22 && u <= .60 && z >= 11.5 && z <= 15.5) {                                          // yan cam
-          if (Math.abs(u - .43) < .012) return 0x1d2a33;
-          return z > 14.5 ? 0x3c6a86 : 0x1c3a4d;
-        }
-        if (u < .1 && z >= 12 && z <= 15.5 && av < .7) return 0x1f3d52;                                           // arka cam
-        if (!c.isTop && u > .04 && u < .2 && z >= 10.5 && z <= 15) {                                                // arka beyaz şeritler
-          const k = (u * 48 + z * 0.9) % 5; if (k < 1) return 0xf4f6f8;
-        }
-        return 0x2a94d8;
+        if (c.isTop && u >= .5 && u <= .8 && av < .84) return (Math.abs(u - .6 - av * .04) < .012) ? 0x8ab4cc : 0x203e52;   // ön cam
+        if (!c.isTop && u >= .36 && u <= .58 - (z - 11) * .01 && z >= 11.6 && z <= 15.6) return z > 14.6 ? 0x3d6c88 : 0x1b384b;  // kapı camı
+        if (!c.isTop && u > .06 && u < .32) { const k = u * 48 - z * .9; if (((k % 4) + 4) % 4 < 1.1) return 0xf4f6f8; }  // beyaz şeritler
+        return BL;
       }
-      // kaput: siyah panel + 36 plakası + mavi V
       if (c.isTop) {
-        if (u > .77 && u < .9 && av < .46) return (u > .805 && u < .875 && av < .24) ? 0xf4f6f8 : 0x23272c;
-        if (u > .72) return av < .9 * (1 - (u - .72) / .3) + .06 ? 0x2a94d8 : 0xb7c1ca;
-        return 0x2a94d8;
+        if (u > .8 && u < .92 && av < .42) return (u > .83 && u < .89 && av < .22) ? 0xf4f6f8 : 0x262a2f;   // kaput plakası
+        if (u > .8) return av < .86 * (1 - (u - .8) / .22) + .04 ? BL : SV;                                  // mavi V
+        return BL;
       }
-      // kapı: 36 numarası
-      if (u > .4 && u < .5 && z >= 5 && z <= 8.5) return (u > .415 && u < .485 && z > 5.5 && z < 8) ? 0xf4f6f8 : 0x15181b;
-      // kapı menteşe çizgisi
-      if (Math.abs(u - .62) < .01 && z > 3 && z < 10) return 0x8a939c;
-      // gövde alt yarısı gümüş, öne doğru yükselen mavi sınır
-      return z < 3 + 10 * u ? 0xb7c1ca : 0x2a94d8;
+      // kapı: çizgiler, 36 numarası, menteşe
+      if ((Math.abs(u - .36) < .008 || Math.abs(u - .585) < .008) && z > 3 && z < 11.6) return 0x5f6870;
+      if (Math.abs(u - .6) < .012 && (Math.abs(z - 5) < .6 || Math.abs(z - 8.6) < .6)) return 0xdfe3e6;
+      if (u > .41 && u < .52 && z >= 6 && z <= 9.4) return (u > .425 && u < .505 && z > 6.5 && z < 9) ? ((Math.round(u * 96) % 3 && z > 7 && z < 8.4) ? 0x15181b : 0xf4f6f8) : 0x15181b;
+      if (u > .4 && u < .44 && z > 9.8 && z < 10.6) return 0x1a1d20;                                    // kapı kolu
+      return z < 3.6 + 10 * Math.pow(u, 1.6) ? SV : BL;
     },
-    wheels: [{ u: .2, r: 3.6, hub: 0xe05a3a, spokes: 10 }, { u: .74, r: 3.6, hub: 0xc9ced3, spokes: 10 }],
-    extras(put, I) {
-      // aynalar
-      for (const s of [-1, 1]) for (let x = 0; x < 2; x++) for (let z = 0; z < 2; z++) put(Math.round(.66 * L) + x, s < 0 ? -1 : 20, 11 + z, 0x15181b);
-    }
+    wheels: [{ u: .19, r: 4.6, hub: 0xd9483a, spokes: 10 }, { u: .79, r: 4.6, hub: 0xc9ced3, spokes: 10 }],
+    extras(put) { for (const y of [-1.2, 20.2]) for (let x = 0; x < 2; x++) for (let z = 0; z < 2.4; z += .7) put(.64 * 48 + x, y, 11.4 + z, 0x15181b); }
   },
+  /* PARS (701): 3 tekerlekli prototip. Kırmızı, uzun sivri kuyruk, ön tekerlekler siyah kapaklı (hidroket amblemi),
+     kabarcık kabin ve arkasında tümsek, beyaz sponsor yazıları, Türk bayrağı, Shell. */
   pars: {
-    W: 17, H: 15, clear: 1.5,
-    hw: u => kp([[0, .18], [.08, .42], [.25, .74], [.5, .9], [.72, 1], [.88, .96], [1, .6]], u),
-    belt: u => kp([[0, 4.2], [.08, 6], [.3, 7.6], [.55, 8.6], [.72, 8.4], [.88, 7], [.97, 5.4], [1, 4.4]], u),
-    top: u => kp([[0, 4.2], [.08, 6], [.3, 7.6], [.42, 9.6], [.55, 11.4], [.66, 11.6], [.76, 9.4], [.88, 7], [1, 4.4]], u),
-    cw: .62, nLow: 2.6, nUp: 2,
+    W: 17, H: 15, clear: 1.6,
+    hw: u => kp([[0, .12], [.1, .4], [.3, .72], [.55, .92], [.75, 1], [.9, .95], [1, .55]], u),
+    belt: u => kp([[0, 6], [.1, 6.6], [.35, 7.8], [.6, 8.4], [.8, 8], [.93, 6.6], [1, 4.6]], u),
+    top: u => kp([[0, 6], [.1, 6.8], [.35, 8.4], [.5, 10], [.6, 11.8], [.68, 12.8], [.76, 12.4], [.85, 10.2], [.92, 7.8], [1, 4.6]], u),
+    cw: .76, nLow: 2.6, nUp: 2,
     paint(u, v, z, c) {
-      const av = Math.abs(v);
-      if (c.upper) {
-        if (u > .6 && u < .66 && c.isTop) return 0x8fb3c7;
-        return u > .74 ? 0x1b252c : 0x10171c;
+      const av = Math.abs(v), R = 0xc81e2b;
+      if (c.upper || (c.isTop && u > .62 && u < .88 && av < .6)) {
+        if (u > .6 && u < .9) return (c.isTop && Math.abs(u - .7) < .015) ? 0x9cc0d4 : (z > c.top - 1.4 ? 0x2a3a46 : 0x111a21);  // kabarcık cam
+        return z > c.top - 1 ? 0xd8323c : R;
       }
-      if (u > .94 && z >= 3.5 && z <= 5.5 && av > .3 && av < .82) return 0xffffff;                  // köşeli farlar
-      if (u > .94 && z >= 3 && z <= 6 && av > .25 && av < .86) return 0x111111;
-      if (c.isTop) return (u > .82 && u < .9 && av < .3) ? 0xf4f6f8 : 0xc61f2a;
-      if (u > .62 && u < .7 && z >= 4.5 && z <= 7.5) return (u > .635 && u < .685 && z > 5 && z < 7) ? 0xf4f6f8 : 0x181818;   // 616
-      if (u > .7 && u < .76 && z >= 5 && z <= 7.5) return 0xffd200;                                  // sarı sponsor
-      if (u > .2 && u < .52 && z >= 3 && z <= 5) return (Math.floor(u * 90) % 4 === 0) ? 0x1a1a1a : 0xf2f2f2;       // sponsor şeridi
-      if (u > .35 && u < .52 && z > 5 && z <= 6.5) return Math.floor(u * 70) % 3 === 0 ? 0xf2f2f2 : 0xc61f2a;
-      return z < 2.8 ? 0x8a141c : 0xc61f2a;
+      if (u > .955 && z >= 4 && z <= 6 && av > .32 && av < .82) return ((u * 48 + z) % 2 < 1.2) ? 0xffffff : 0x1a1a1a;   // LED farlar
+      if (u > .96 && z >= 2.6 && z < 4.4 && av < .3) return 0x0e0f11;                                                       // ön ağız
+      if (c.isTop) {
+        if (u > .3 && u < .44 && Math.abs(v + .35 - (u - .3) * 1.6) < .07) return 0xf4f6f8;                                    // Atatürk imzası
+        return u < .5 && Math.abs(v) < .1 ? 0xd8323c : R;
+      }
+      if (u > .62 && u < .7 && z >= 4.4 && z <= 7.6) return (u > .632 && u < .688 && z > 4.9 && z < 7.1 && (Math.round(u * 120) % 3 === 0 || z < 5.3 || z > 6.7)) ? 0x111111 : 0xf8f8f6;  // 701
+      if (u > .72 && u < .78 && z >= 4.8 && z <= 7.6) { const d = Math.hypot((u - .75) * 48, z - 6.2); return d < 1.5 ? 0xffd400 : d < 1.9 ? 0xe2231a : R; }  // Shell
+      { const d = Math.hypot((u - .555) * 48, z - 6.3); if (d < 1.6) return d > 1.1 ? 0xf4f6f8 : (Math.hypot((u - .56) * 48, z - 6.3) < .7 ? 0xf4f6f8 : 0xd1202b); }  // bayrak
+      { const d = Math.hypot((u - .495) * 48, z - 6.3); if (d < 1.6) return d > 1.05 ? 0xf4f6f8 : 0xb21a26; }                                               // üniversite mührü
+      if (u > .22 && u < .58 && z >= 3 && z <= 5.2) return ((Math.round(u * 110) + Math.round(z * 2)) % 3 === 0) ? 0xf4f6f8 : R;                       // sponsorlar
+      return z < 2.8 ? 0x8a141c : R;
     },
-    wheels: [{ u: .8, r: 3.2, cover: 0x111214 }, { u: .14, r: 2.8, center: true, cover: 0x111214 }],
-    extras(put) {
-      // arka kanat
-      for (let x = Math.round(.08 * L); x <= Math.round(.2 * L); x++) for (let y = 3; y < 14; y++) {
-        const zt = 7.6 + (x - .08 * L) * 0.32; for (let z = 6; z <= zt; z++) put(x, y, z, z > zt - 1 ? 0xd8323c : 0xb01a24);
-      }
+    wheels: [{ u: .79, r: 3.8, cover: 0x101113, emblem: true }, { u: .12, r: 3, center: true, cover: 0x101113 }],
+    extras(put) {   // kabinin arkasındaki tümsek
+      for (let x = .5 * 48; x <= .66 * 48; x += .6) { const t = (x - .5 * 48) / (.16 * 48), zt = 10 + t * 3.6;
+        for (let y = 6.6; y <= 10.4; y += .6) for (let z = 9; z <= zt; z += .6) put(x, y, z, z > zt - .7 ? 0xd8323c : 0xb81a26); }
     }
   },
+  /* UCUBE (7): 3 tekerlekli elektromobil. Beyaz burun üstünde mavi noktalar, turuncu gövde, çapraz mavi bant
+     ve beyaz şeritler, noktalı turuncu panel, uzun yuvarlak kuyruk, kırmızı tepe lambası. */
   ucube: {
-    W: 18, H: 17, clear: 1.5,
-    hw: u => kp([[0, .3], [.08, .55], [.3, .88], [.5, .95], [.76, .92], [.94, .78], [1, .5]], u),
-    belt: u => kp([[0, 5], [.1, 7], [.3, 9.4], [.6, 10], [.8, 8.4], [.94, 6.4], [1, 4.8]], u),
-    top: u => kp([[0, 5], [.08, 8], [.32, 12.8], [.46, 14.4], [.6, 13.8], [.74, 10.4], [.9, 7.6], [1, 4.8]], u),
+    W: 18, H: 17, clear: 1.6,
+    hw: u => kp([[0, .55], [.06, .74], [.3, .9], [.55, .96], [.78, .92], [.93, .78], [1, .5]], u),
+    belt: u => kp([[0, 8.4], [.08, 9.4], [.3, 10.2], [.55, 10.4], [.72, 9.6], [.85, 8], [.95, 6.2], [1, 4.8]], u),
+    top: u => kp([[0, 8.4], [.06, 10.6], [.3, 12.6], [.5, 14.2], [.6, 14.6], [.7, 13.4], [.8, 10.4], [.9, 8], [1, 4.8]], u),
     cw: .86, nLow: 3, nUp: 2.3,
     paint(u, v, z, c) {
-      const av = Math.abs(v);
-      if (u > .955 && z >= 3.5 && z <= 5 && av > .35 && av < .82) return 0xffffff;
-      if (c.upper && !c.isTop && u > .4 && u < .7 && z >= 10.2 && z <= 13) return (z > 12.5 || u < .41 || u > .69) ? 0x111111 : 0x223646;  // yan cam
-      if (c.upper && c.isTop && u > .64 && u < .78 && av < .78) return 0x22364a;                                                           // ön cam
-      if (u > .17 && u < .25 && z >= 7.5 && z <= 10.5 && !c.isTop) return (Math.abs(u - .21) < .02 && z > 8 && z < 10) ? 0x222222 : 0xf4f6f8; // 7 numara
-      if (u > .7) {                                                                                                                        // beyaz burun + mavi noktalar
-        if (c.isTop && u > .8 && u < .92 && (Math.round(u * 48) % 2 === 0) && (Math.round(v * 6) % 2 === 0)) return 0x2a4fa8;
-        return 0xf4f6f8;
+      const av = Math.abs(v), OR = 0xf28c1c, BL = 0x2a50a8, WH = 0xf4f6f8;
+      if (u > .96 && z >= 4 && z <= 5.4 && av > .38 && av < .8) return 0xffffff;
+      if (c.upper && !c.isTop && u > .5 && u < .68 && z >= 11 && z <= 14) return (z > 13.4 || u < .51 || u > .67) ? 0x111111 : 0x22384a;   // yan cam
+      if (c.upper && c.isTop && u > .66 && u < .82 && av < .8) return 0x1f3448;                                                         // ön cam
+      if (c.isTop && u > .28 && u < .36 && av < .3) { const d = Math.hypot((u - .32) * 48, v * 9); return d < 1.7 ? (d < 1 && Math.abs((u - .32) * 48 + v * 6) < .5 ? 0x111111 : WH) : BL; }  // üstte 7
+      if (!c.isTop && u > .14 && u < .24 && z >= 8 && z <= 11.6) { const d = Math.hypot((u - .19) * 48, z - 9.8); if (d < 2) return (d < 1.3 && Math.abs((u - .19) * 48 - (z - 9.8) * .5) < .45) ? 0x111111 : WH; }  // yanda 7
+      if (!c.isTop && u > .54 && u < .6 && z > 9 && z < 10.6) return u > .57 ? 0x4cb04c : WH;                                        // EC etiketi
+      if (u > .72) {                                                                                                                  // beyaz burun + mavi noktalar
+        const dens = 1 - (u - .72) / .16;
+        if (dens > 0 && (Math.round(u * 96) % 2 === 0) && (Math.round(z * 2 + (c.isTop ? v * 9 : 0)) % 2 === 0) && ((u * 31 + z * 7) % 1 < dens)) return BL;
+        if (!c.isTop && z > 5 && z < 6.2 && u < .84 && Math.abs(z - 5.6 - (u - .72) * 8) < .5) return OR;                             // turuncu şimşek ucu
+        return WH;
       }
-      const d = u + z * .018;                                                                                                              // çapraz şeritler
-      if (d > .27 && d < .3) return 0xf4f6f8;
-      if (d > .3 && d < .36) return 0x2a4fa8;
-      if (d > .58 && d < .61) return 0xf4f6f8;
-      if (d > .61 && d < .66) return 0x2a4fa8;
-      if (u > .38 && u < .56 && !c.isTop && z > 4 && z < 9 && ((x8(u) + z) % 2 === 0)) return 0xd77812;                                // noktalı panel
-      if (u > .66 && u < .7) return 0xf4f6f8;
-      return 0xf08a1c;
+      const d = u + z * .02;                                                                                                          // çapraz bant ve şeritler
+      if (d > .3 && d < .33) return WH;
+      if (d > .33 && d < .44) return (!c.isTop && d > .4 && d < .415) ? WH : BL;
+      if (d > .44 && d < .465) return WH;
+      if (d > .64 && d < .665) return WH;
+      if (!c.isTop && z < 3.6 && u > .3 && u < .7) return BL;                                                                         // mavi etek
+      if (!c.isTop && u > .46 && u < .64 && z > 3.6 && z < 9.6 && ((Math.round(u * 96) + Math.round(z * 2)) % 2 === 0)) return 0xc96a10;  // noktalı panel
+      if (!c.isTop && Math.abs(z - 6.2 + (u - .5) * 6) < .45 && u > .5 && u < .7) return WH;                                         // beyaz şimşek
+      return OR;
     },
-    wheels: [{ u: .2, r: 3, skirt: true }, { u: .8, r: 3.2, spokes: 8 }],
+    wheels: [{ u: .79, r: 3.9, spokes: 10, hub: 0xc9ced3 }, { u: .14, r: 3, center: true, skirt: true }],
     extras(put) {
-      // kırmızı tepe lambası
-      const x0 = Math.round(.78 * L); for (let x = 0; x < 2; x++) for (let y = 8; y < 10; y++) for (let z = 0; z < 2; z++) put(x0 + x, y, 11 + z, z ? 0xff3b30 : 0x8a1010);
+      const x0 = .8 * 48; for (let x = 0; x < 1.6; x += .6) for (let y = 4.4; y < 6; y += .6) for (let z = 0; z < 2.2; z += .6) put(x0 + x, y, 11 + z, z > 1.2 ? 0xff3b30 : 0x8a1010);   // tepe lambası
+      for (let x = 0; x < 1.4; x += .6) for (let z = 0; z < 1.6; z += .6) put(.71 * 48 + x, -1, 11.6 + z, 0x15181b);                                   // ayna
     }
   },
+  /* HELIANTHUS (304): gümüş damla gövde, burundan ortaya uzanan büyük füme kabin, açık gümüş jantlı ön
+     tekerlekler, kuyrukta küçük rüzgârlık, Shell ve numara plakası. */
   heli: {
-    W: 18, H: 15, clear: 1.6,
-    hw: u => kp([[0, .45], [.1, .78], [.3, .95], [.6, 1], [.85, .9], [1, .5]], u),
-    belt: u => kp([[0, 4.5], [.1, 7.2], [.3, 8.4], [.6, 8.6], [.82, 7.4], [.95, 5.6], [1, 4]], u),
-    top: u => kp([[0, 4.5], [.1, 7.2], [.32, 8.6], [.42, 11.2], [.58, 12.2], [.74, 11], [.86, 7.8], [.95, 5.6], [1, 4]], u),
-    cw: .8, nLow: 2.2, nUp: 1.8,
+    W: 18, H: 14.5, clear: 1.6,
+    hw: u => kp([[0, .3], [.1, .62], [.3, .9], [.55, 1], [.8, .95], [.93, .78], [1, .45]], u),
+    belt: u => kp([[0, 6], [.1, 7], [.3, 8.2], [.55, 8.4], [.75, 7.4], [.9, 5.8], [1, 4]], u),
+    top: u => kp([[0, 6.6], [.06, 7.6], [.2, 8.8], [.4, 11], [.52, 12.4], [.62, 12.2], [.75, 10.6], [.87, 8.2], [.95, 6], [1, 4]], u),
+    cw: .86, nLow: 2.2, nUp: 1.8,
     paint(u, v, z, c) {
       const av = Math.abs(v);
-      if (c.upper) return (u > .5 && u < .56 && c.isTop) ? 0x9fb4c0 : (u > .6 && av < .3 && c.isTop) ? 0x2b3c47 : 0x18232b;
-      if (u > .95 && z >= 3 && z <= 4.5 && av > .3 && av < .75) return 0xfff8de;
-      if (u > .78 && u < .86 && z >= 5 && z <= 7 && !c.isTop) return (u > .79 && u < .85 && z > 5.3 && z < 6.7) ? 0x222222 : 0xf4f6f8;  // 304
-      if (u > .22 && u < .3 && z >= 4.6 && z <= 6.4 && !c.isTop) return 0xffc21a;                                                         // sarı sponsor
-      if (u > .32 && u < .7 && z >= 3.6 && z <= 4.6 && !c.isTop) return Math.floor(u * 80) % 3 ? 0xe9ecef : 0x2a62b8;
-      if (c.isTop) return (u < .3 && av < .2) ? 0xe8ecef : 0xc9cfd5;
-      return z < 3 ? 0x7f878f : (z > c.belt - 1.5 ? 0xbfc6cd : 0xaab2ba);
+      if ((c.upper && u > .5) || (c.isTop && u > .52 && u < .93 && av < .82 - (u - .52) * .6)) return (c.isTop && Math.abs(u - .66) < .018) ? 0x8ea6b4 : (z > c.top - 1.2 ? 0x2a3a46 : 0x131c24);       // füme kabin
+      if (u > .955 && z >= 3 && z <= 4.4 && av > .3 && av < .75) return 0xfff8de;
+      if (!c.isTop && u > .62 && u < .71 && z >= 4.6 && z <= 7.2) return (u > .632 && u < .698 && z > 5.1 && z < 6.7 && (Math.round(u * 120) % 3 === 0 || z < 5.4 || z > 6.4)) ? 0x151515 : 0xf8f8f6;  // 304
+      if (!c.isTop && u > .74 && u < .8 && z >= 4.6 && z <= 7.4) { const d = Math.hypot((u - .77) * 48, z - 6); return d < 1.3 ? 0xffd400 : d < 1.7 ? 0xe2231a : 0xc4cbd2; }  // Shell
+      if (!c.isTop && u > .2 && u < .54 && z >= 3.4 && z <= 4.8) return ((Math.round(u * 110) + Math.round(z * 2)) % 3 === 0) ? 0x2a3a8a : 0xf2f4f6;               // sponsor şeridi
+      if (c.isTop && u > .8 && u < .88 && av < .25) { const d = Math.hypot((u - .84) * 48, v * 9); if (d < 1.6) return d < 1 ? 0xf4f6f8 : 0xd1202b; }            // bayrak
+      if (c.isTop) return (Math.abs(v) < .25 && u < .5) ? 0xe6eaee : 0xc8cfd6;
+      return z < 3 ? 0x7c848c : (z > c.belt - 1.4 ? 0xd2d8de : 0xb4bcc4);
     },
-    wheels: [{ u: .18, r: 2.8, skirt: true }, { u: .76, r: 3.2, spokes: 5 }],
-    extras() {}
+    wheels: [{ u: .78, r: 3.7, spokes: 6, hub: 0xd7dce0 }, { u: .14, r: 2.8, center: true, skirt: true }],
+    extras(put) { for (let x = .4; x < .07 * 48; x += .6) { const hw = this.hw(x / 48) * 9 - .4; for (let y = 9 - hw; y < 9 + hw; y += .6) put(x, y, 6.8 + (1 - x / 3.4) * 1.4, 0xd2d8de); } }   // rüzgârlık
   }
 };
 
+const RES = 1.34;               // her tarif biriminde kaç voxel (daha ince ayrıntı)
 function buildModel(key) {
-  const sp = SPEC[key], W = sp.W, H = sp.H;
+  const sp = SPEC[key], LV = Math.round(L * RES), WV = Math.round(sp.W * RES), HV = Math.round(sp.H * RES);
   const occ = new Map();
-  const K = (x, y, z) => (z * 64 + (y + 4)) * 64 + x;
-  const put = (x, y, z, c) => { if (x < 0 || x >= L || z < 0 || z >= H + 3) return; occ.set(K(x, y, z), { x, y, z, c }); };
-  for (let x = 0; x < L; x++) {
-    const u = (x + .5) / L, hw = Math.max(.12, sp.hw(u)) * W / 2, belt = sp.belt(u), top = Math.max(belt, sp.top(u));
-    for (let y = 0; y < W; y++) {
-      const vy = y + .5 - W / 2, v = vy / (W / 2), t = Math.abs(vy) / hw;
+  const K = (x, y, z) => (z * 96 + (y + 4)) * 96 + x;
+  const putV = (x, y, z, c) => { if (x < 0 || x >= LV || z < 0 || z >= HV + 4) return; occ.set(K(x, y, z), { x, y, z, c }); };
+  const put = (x, y, z, c) => putV(Math.floor(x * RES), y < 0 ? Math.floor(y) : y >= sp.W ? WV + Math.floor(y - sp.W) : Math.floor(y * RES), Math.floor(z * RES), c);
+  for (let x = 0; x < LV; x++) {
+    const u = (x + .5) / LV, hw = Math.max(.12, sp.hw(u)) * sp.W / 2, belt = sp.belt(u), top = Math.max(belt, sp.top(u));
+    for (let y = 0; y < WV; y++) {
+      const vy = (y + .5) / RES - sp.W / 2, v = vy / (sp.W / 2), t = Math.abs(vy) / hw;
       if (t > 1.02) continue;
       const low = sp.clear + (belt - sp.clear) * Math.pow(Math.max(0, 1 - Math.pow(Math.min(1, t), sp.nLow)), 1 / sp.nLow);
       const tc = t / sp.cw;
       const up = tc <= 1 && top > belt + .3 ? belt + (top - belt) * Math.pow(Math.max(0, 1 - Math.pow(tc, sp.nUp)), 1 / sp.nUp) : 0;
       const h = Math.max(low, up);
-      for (let z = Math.ceil(sp.clear); z <= Math.round(h); z++) {
+      for (let zv = Math.ceil(sp.clear * RES); zv <= Math.round(h * RES); zv++) {
+        const z = (zv + .5) / RES;
         const upper = z > belt + .4 && up > 0 && z <= up + .5;
-        put(x, y, z, sp.paint(u, v, z, { belt, top, h, isTop: z >= h - 1, upper, side: t > .7 }));
+        putV(x, y, zv, sp.paint(u, v, z, { belt, top, h, isTop: z >= h - .8, upper, side: t > .7 }));
       }
     }
   }
   // tekerlekler
   for (const wh of sp.wheels) {
-    const xc = wh.u * L - .5, zc = wh.r - .2;
-    const mid = Math.floor(W / 2), ys = wh.center ? [mid - 1, mid] : [-1, 0, W - 1, W];
-    for (const y of ys) for (let x = Math.floor(xc - wh.r - 1); x <= xc + wh.r + 1; x++) for (let z = 0; z <= zc + wh.r + 1; z++) {
-      const d2 = sq(x - xc) + sq(z - zc); if (d2 > wh.r * wh.r + .4) continue;
-      const outer = wh.center || y === -1 || y === W;
+    const xc = wh.u * LV - .5, r = wh.r * RES, zc = r - .2;
+    const mid = Math.floor(WV / 2), ys = wh.center ? [mid - 1, mid] : [-2, -1, 0, WV - 1, WV, WV + 1];
+    for (const y of ys) for (let x = Math.floor(xc - r - 1); x <= xc + r + 1; x++) for (let z = 0; z <= zc + r + 1; z++) {
+      const d2 = sq(x - xc) + sq(z - zc); if (d2 > r * r + .4) continue;
+      const outer = wh.center || y === -2 || y === WV + 1;
       let col = 0x17181a;
       if (outer) {
-        const r = Math.sqrt(d2);
-        if (wh.cover) col = r < 1 ? 0xffffff : (r > wh.r - .9 ? 0x1c1d20 : wh.cover);
-        else if (wh.skirt) col = r > wh.r - 1 ? 0x17181a : 0x2a2c30;
-        else if (r <= wh.r - 1.1) {
+        const rr = Math.sqrt(d2), dx = (x - xc) / r, dz = (z - zc) / r;
+        if (wh.cover) {
+          col = rr > r - 1 ? 0x1c1d20 : wh.cover;
+          if (wh.emblem) { const m = Math.abs(dx) * .8 + Math.abs(dz); if ((m > .36 && m < .5 && dz > -.2) || (Math.abs(dz + .05) < .07 && Math.abs(dx) < .62)) col = 0xf4f6f8; }
+          else if (rr < 1) col = 0xffffff;
+        } else if (wh.skirt) col = rr > r - 1 ? 0x17181a : 0x2a2c30;
+        else if (rr <= r - 1.3) {
           const a = Math.atan2(z - zc, x - xc), n = wh.spokes || 6;
-          const spoke = Math.abs(((a / (Math.PI * 2) * n) % 1 + 1) % 1 - .5) > .32;
-          col = r < 1.1 ? (wh.hub || 0xc9ced3) : spoke ? 0xd7dce0 : 0x3a3d42;
-          if (wh.hub && r < 1.9) col = wh.hub;
+          const spoke = Math.abs(((a / (Math.PI * 2) * n) % 1 + 1) % 1 - .5) > .3;
+          col = spoke ? 0xd7dce0 : 0x34373c;
+          if (rr < 1.9) col = 0x9aa0a6;
+          if (wh.hub && rr < 2.6 && rr > 1.2 && wh.hub !== 0xc9ced3) col = wh.hub;     // renkli fren diski
         }
-      }
-      put(x, y, z, col);
+      } else if (Math.sqrt(d2) < r - 1.2 && !wh.center) col = 0x2a2c30;
+      putV(x, y, z, col);
     }
   }
-  sp.extras(put);
+  sp.extras.call(sp, put);
   // yüzey voxelleri ve normaller
   const empty = (x, y, z) => !occ.has(K(x, y, z));
   const vox = [];
@@ -200,9 +211,9 @@ function buildModel(key) {
     if (!ex.some(Boolean)) continue;
     let nx = ex[0] - ex[1], ny = ex[2] - ex[3], nz = ex[4] - ex[5]; if (!nx && !ny && !nz) nz = 1;
     const l = Math.hypot(nx, ny, nz);
-    vox.push({ x: x - L / 2 + .5, y: y - W / 2 + .5, z: z + .5, r: o.c >> 16 & 255, g: o.c >> 8 & 255, b: o.c & 255, nx: nx / l, ny: ny / l, nz: nz / l, top: ex[4] });
+    vox.push({ x: (x - LV / 2 + .5) / RES, y: (y - WV / 2 + .5) / RES, z: (z + .5) / RES, r: o.c >> 16 & 255, g: o.c >> 8 & 255, b: o.c & 255, nx: nx / l, ny: ny / l, nz: nz / l, top: ex[4] });
   }
-  return { vox, W, H, L };
+  return { vox, W: sp.W, H: sp.H, L, RES };
 }
 
 const LIGHT = (() => { const l = [-.42, -.5, .76], m = Math.hypot(...l); return l.map(v => v / m); })();
@@ -219,12 +230,12 @@ function renderVox(g, m, yaw, s, ox, oy, pitch) {
     const nrx = v.nx * cs - v.ny * sn, nry = v.nx * sn + v.ny * cs;
     o.d = ry * cp - v.z * spn; o.sx = rx; o.sy = -(v.z * cp + ry * spn);
     const dif = Math.max(0, nrx * LIGHT[0] + nry * LIGHT[1] + v.nz * LIGHT[2]);
-    const spec = Math.pow(Math.max(0, nrx * HALF[0] + nry * HALF[1] + v.nz * HALF[2]), 18) * .35;
+    const spec = Math.pow(Math.max(0, nrx * HALF[0] + nry * HALF[1] + v.nz * HALF[2]), 24) * .2;
     const br = .5 + .62 * dif;
     o.col = 'rgb(' + Math.min(255, v.r * br + 255 * spec | 0) + ',' + Math.min(255, v.g * br + 255 * spec | 0) + ',' + Math.min(255, v.b * br + 255 * spec | 0) + ')';
   }
   list.sort((a, b) => b.d - a.d);
-  const sz = Math.max(1, Math.ceil(s * 1.12)), half = s / 2;
+  const vs = s / (m.RES || 1), sz = Math.max(1, Math.ceil(vs * 1.12)), half = vs / 2;
   for (const o of list) { g.fillStyle = o.col; g.fillRect(Math.floor(ox + o.sx * s - half), Math.floor(oy + o.sy * s - half), sz, sz); }
 }
 // koyu dış hat ekleyerek çiz (8-bit görünüm)

@@ -83,7 +83,7 @@ let selCar = CARK[store.get('hgp-car', 'turaz')] ? store.get('hgp-car', 'turaz')
 let workshop, workshopEmpty, imgPine, imgPine2, imgAutumn, imgTires, imgBanner, imgStand, imgGantry, imgH2;
 let imgBox, imgCone, imgBarrel, imgOil, imgPalm, imgCypress, imgPoplar, imgYacht, imgDarkPine;
 const BUILDINGS = [], ICONS = {};
-let NS, SX, SY, TX, TY, KV, GRAV, WS_I, WS, ST_I, STAND, tc, tex, MIPS, mip, OUTCOL, SKID, pano, minimap, mmScale;
+let NS, SX, SY, SZ, TX, TY, KV, GRAV, WS_I, WS, ST_I, STAND, tc, tex, MIPS, mip, OUTCOL, SKID, pano, minimap, mmScale;
 let TW = 56, TK = null, TH = null;
 const RNX = i => -TY[i], RNY = i => TX[i];
 const objs = [], grid = new Map(), GC = 64, pickups = [], boxes = [], obst = [], haz = [];
@@ -196,41 +196,47 @@ const TRACKS = {
   istanbul: { name: 'İSTANBUL PARK', short: 'İSTANBUL', tw: 56, theme: 'istanbul',
     cp: [[1150,1760],[800,1760],[470,1730],[330,1600],[350,1430],[500,1340],[650,1280],[700,1140],[600,1010],[430,930],
       [330,760],[380,560],[560,400],[820,320],[1080,340],[1260,470],[1300,660],[1200,820],[1150,980],[1290,1080],
-      [1500,1030],[1680,920],[1820,1000],[1840,1220],[1720,1380],[1560,1430],[1480,1560],[1360,1700]] },
+      [1500,1030],[1680,920],[1820,1000],[1840,1220],[1720,1380],[1560,1430],[1480,1560],[1360,1700]],
+    h: [34,34,28,8,4,10,22,30,26,18,12,16,26,34,40,44,40,30,22,16,22,34,46,48,42,36,34,34] },
   monaco: { name: 'MONAKO', short: 'MONAKO', tw: 44, theme: 'monaco',
     cp: [[950,1500],[660,1500],[450,1470],[370,1320],[420,1120],[500,920],[470,720],[540,540],[740,470],[900,560],
       [1010,710],[1150,660],[1220,530],[1320,590],[1270,740],[1390,880],[1620,900],[1820,980],[1860,1180],[1720,1270],
-      [1640,1390],[1490,1430],[1400,1340],[1300,1430],[1190,1350],[1100,1440],[1050,1500]] },
+      [1640,1390],[1490,1430],[1400,1340],[1300,1430],[1190,1350],[1100,1440],[1050,1500]],
+    h: [6,6,6,8,20,34,44,50,52,44,34,30,26,22,16,10,6,4,4,4,4,4,4,4,5,6,6] },
   spa: { name: 'SPA', short: 'SPA', tw: 58, theme: 'spa',
     cp: [[760,1680],[520,1720],[360,1650],[400,1530],[590,1470],[760,1370],[830,1240],[790,1110],[880,900],[1030,650],
       [1180,420],[1290,280],[1450,290],[1490,420],[1610,500],[1720,630],[1650,780],[1500,760],[1410,880],[1380,1030],
-      [1460,1160],[1610,1210],[1740,1330],[1790,1510],[1690,1660],[1480,1740],[1200,1770],[1010,1740],[900,1700]] },
+      [1460,1160],[1610,1210],[1740,1330],[1790,1510],[1690,1660],[1480,1740],[1200,1770],[1010,1740],[900,1700]],
+    h: [44,44,42,30,16,6,30,46,56,66,74,80,80,70,60,52,44,38,28,20,14,10,8,10,18,28,36,42,44] },
   monza: { name: 'MONZA', short: 'MONZA', tw: 56, theme: 'monza',
     cp: [[250,1450],[250,1200],[250,950],[250,720],[267,620],[352,585],[381,520],[373,430],[417,300],[555,190],[758,140],[990,150],[1178,210],
       [1294,250],[1338,310],[1425,330],[1599,350],[1744,410],[1802,510],[1787,610],[1700,700],[1483,820],[1222,960],[990,1080],
-      [874,1150],[801,1230],[714,1280],[656,1350],[642,1500],[642,1650],[613,1760],[468,1830],[308,1800],[257,1680]] },
+      [874,1150],[801,1230],[714,1280],[656,1350],[642,1500],[642,1650],[613,1760],[468,1830],[308,1800],[257,1680]],
+    h: [10,10,10,10,10,10,10,9,8,7,6,6,8,10,11,12,14,15,15,14,12,9,6,4,4,5,6,7,8,9,10,10,10,10] },
   baku: { name: 'BAKÜ', short: 'BAKÜ', tw: 44, theme: 'baku',
     cp: [[826,1650],[1166,1650],[1506,1650],[1737,1648],[1825,1613],[1846,1525],[1846,1300],[1832,1200],[1750,1175],[1574,1175],[1492,1163],
       [1465,1088],[1465,900],[1492,825],[1587,800],[1723,800],[1805,775],[1832,675],[1832,500],[1805,400],[1696,375],[1370,375],[1098,375],
       [962,350],[880,275],[798,263],[744,325],[662,350],[581,300],[499,213],[390,200],[282,225],[227,325],[214,550],[200,863],[227,1175],
-      [309,1425],[445,1600],[608,1650]] }
+      [309,1425],[445,1600],[608,1650]],
+    h: [4,4,4,4,5,6,8,10,11,12,12,13,14,15,16,16,17,18,20,21,22,22,23,25,28,30,30,29,28,28,27,26,24,20,14,9,6,4,4] }
 };
 const TRACK_KEYS = ['istanbul', 'monaco', 'spa', 'monza', 'baku'];
 const SPACING = 6;
-function centerline(cp) {
-  const raw = [], n = cp.length;
+function centerline(cp, hs) {
+  const raw = [], n = cp.length, hh = i => hs ? hs[(i + n) % n] : 0;
   for (let i = 0; i < n; i++) {
     const p0 = cp[(i - 1 + n) % n], p1 = cp[i], p2 = cp[(i + 1) % n], p3 = cp[(i + 2) % n];
     for (let t = 0; t < 1; t += 1 / 60) {
       const t2 = t * t, t3 = t2 * t;
       const f = (a, b, c, d) => 0.5 * ((2 * b) + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3);
-      raw.push([f(p0[0], p1[0], p2[0], p3[0]), f(p0[1], p1[1], p2[1], p3[1])]);
+      const s = t * t * (3 - 2 * t);   // yükseklik: aşırı salınım olmasın diye yumuşak geçiş
+      raw.push([f(p0[0], p1[0], p2[0], p3[0]), f(p0[1], p1[1], p2[1], p3[1]), hh(i) + (hh(i + 1) - hh(i)) * s]);
     }
   }
   const pts = [raw[0]]; let carry = 0;
   for (let i = 1; i <= raw.length; i++) {
     const a = raw[i - 1], b = raw[i % raw.length]; let seg = Math.hypot(b[0] - a[0], b[1] - a[1]), pos = 0;
-    while (carry + (seg - pos) >= SPACING) { pos += SPACING - carry; carry = 0; const t = pos / seg; pts.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]); }
+    while (carry + (seg - pos) >= SPACING) { pos += SPACING - carry; carry = 0; const t = pos / seg; pts.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]); }
     carry += seg - pos;
   }
   if (Math.hypot(pts[pts.length - 1][0] - pts[0][0], pts[pts.length - 1][1] - pts[0][1]) < SPACING * 0.5) pts.pop();
@@ -328,10 +334,10 @@ function useTrack(key) {
   if (!TRACKS[key]) key = 'istanbul';
   if (TK === key) return;
   TK = key; const T = TRACKS[key]; TH = THEMES[T.theme]; TW = T.tw;
-  const P = centerline(T.cp);
+  const P = centerline(T.cp, T.h);
   NS = P.length;
-  SX = new Float32Array(NS); SY = new Float32Array(NS); TX = new Float32Array(NS); TY = new Float32Array(NS); KV = new Float32Array(NS); GRAV = new Uint8Array(NS);
-  for (let i = 0; i < NS; i++) { SX[i] = P[i][0]; SY[i] = P[i][1]; }
+  SX = new Float32Array(NS); SY = new Float32Array(NS); SZ = new Float32Array(NS); TX = new Float32Array(NS); TY = new Float32Array(NS); KV = new Float32Array(NS); GRAV = new Uint8Array(NS);
+  for (let i = 0; i < NS; i++) { SX[i] = P[i][0]; SY[i] = P[i][1]; SZ[i] = P[i][2] || 0; }
   for (let i = 0; i < NS; i++) { const a = P[(i - 1 + NS) % NS], b = P[(i + 1) % NS]; const l = Math.hypot(b[0] - a[0], b[1] - a[1]); TX[i] = (b[0] - a[0]) / l; TY[i] = (b[1] - a[1]) / l; }
   const Kr = new Float32Array(NS);
   for (let i = 0; i < NS; i++) { const a = (i - 4 + NS) % NS, b = (i + 4) % NS; Kr[i] = wrapA(Math.atan2(TY[b], TX[b]) - Math.atan2(TY[a], TX[a])) / (8 * SPACING); }
@@ -349,8 +355,43 @@ function useTrack(key) {
   ST_I = (NS - 18) % NS;
   const ss = -(WS.side || 1);
   STAND = { x: SX[ST_I] + RNX(ST_I) * ss * (TW / 2 + 40), y: SY[ST_I] + RNY(ST_I) * ss * (TW / 2 + 40) };
-  buildTexture(); buildPano(); buildObjects();
+  buildHeight(); buildTexture(); buildPano(); buildObjects();
   haze = ctx.createLinearGradient(0, HY, 0, HY + 46); haze.addColorStop(0, TH.haze + '.85)'); haze.addColorStop(1, TH.haze + '0)');
+}
+/* ---------------- arazi yüksekliği ----------------
+   Pist yüksekliği kontrol noktalarından gelir; çevredeki arazi en yakın pist
+   noktasının yüksekliğinden başlayıp uzaklaştıkça yumuşatılmış ortalamaya kayar. */
+const HMR = 8, HMN = TS / HMR;
+let HM = new Float32Array(HMN * HMN), HFAR = 0;
+function buildHeight() {
+  const N = HMN * HMN, near = new Float32Array(N), dist = new Float32Array(N);
+  for (let cy = 0; cy < HMN; cy++) for (let cx = 0; cx < HMN; cx++) {
+    const x = (cx + .5) * HMR, y = (cy + .5) * HMR; let best = 1e18, bi = 0;
+    for (let i = 0; i < NS; i += 3) { const d = sq(x - SX[i]) + sq(y - SY[i]); if (d < best) { best = d; bi = i; } }
+    near[cy * HMN + cx] = SZ[bi]; dist[cy * HMN + cx] = Math.sqrt(best);
+  }
+  // kutu bulanıklığı (3 tur ≈ gauss)
+  let a = Float32Array.from(near), b = new Float32Array(N); const R = 12;
+  for (let pass = 0; pass < 3; pass++) for (const horiz of [true, false]) {
+    for (let j = 0; j < HMN; j++) { let acc = 0;
+      const at = i => { i = clamp(i, 0, HMN - 1); return horiz ? a[j * HMN + i] : a[i * HMN + j]; };
+      for (let i = -R; i <= R; i++) acc += at(i);
+      for (let i = 0; i < HMN; i++) { (horiz ? (b[j * HMN + i] = acc / (2 * R + 1)) : (b[i * HMN + j] = acc / (2 * R + 1))); acc += at(i + R + 1) - at(i - R); } }
+    [a, b] = [b, a]; }
+  let sum = 0;
+  for (let k = 0; k < N; k++) {
+    const d = dist[k], w = clamp((d - TW / 2 - 14) / 190, 0, 1), sw = w * w * (3 - 2 * w);
+    let h = near[k] * (1 - sw) + a[k] * sw;
+    if (TH.seaY && (k / HMN | 0) * HMR > TH.seaY + 6) h = Math.min(h, -3);
+    HM[k] = h; sum += a[k];
+  }
+  HFAR = sum / N;
+}
+function hAt(x, y) {
+  let gx = x / HMR - .5, gy = y / HMR - .5;
+  gx = gx < 0 ? 0 : gx > HMN - 1.001 ? HMN - 1.001 : gx; gy = gy < 0 ? 0 : gy > HMN - 1.001 ? HMN - 1.001 : gy;
+  const ix = gx | 0, iy = gy | 0, fx = gx - ix, fy = gy - iy, k = iy * HMN + ix;
+  return (HM[k] * (1 - fx) + HM[k + 1] * fx) * (1 - fy) + (HM[k + HMN] * (1 - fx) + HM[k + HMN + 1] * fx) * fy;
 }
 const gridPos = slot => { const i = (NS - 6 - slot * 4 + NS) % NS, lat = (slot % 2 ? 1 : -1) * TW * 0.22; return { i, x: SX[i] + RNX(i) * lat + TX[i] * 4, y: SY[i] + RNY(i) * lat + TY[i] * 4, a: Math.atan2(TY[i], TX[i]) }; };
 const ABGR = (r, g, b) => (0xff000000 | (b << 16) | (g << 8) | r) >>> 0;
@@ -603,6 +644,7 @@ function stepCar(c, inp, dt) {
   if (inp.thr > 0.05) { if (vf < top) vf += acc * inp.thr * dt * (1 - Math.max(0, vf) / top * 0.6); }
   else if (inp.thr < -0.05) { if (vf > 8) vf -= 280 * -inp.thr * dt; else vf = Math.max(-70, vf - 100 * -inp.thr * dt); }
   vf -= vf * sf.drag * dt + Math.sign(vf) * Math.min(Math.abs(vf), 14 * dt);
+  vf -= 170 * (hAt(c.x + fx * 8, c.y + fy * 8) - hAt(c.x - fx * 8, c.y - fy * 8)) / 16 * dt;   // yokuş yavaşlatır, iniş hızlandırır
   if (vf > top) vf -= (vf - top) * 2.2 * dt;
   const spd = Math.abs(vf);
   const steerEff = Math.min(1, spd / 45) * (1 - 0.32 * Math.min(1, spd / st.top));
@@ -928,7 +970,14 @@ function stepParticles(dt) {
 }
 function followCam(c, dt) {
   camA = wrapA(camA + wrapA(c.a - camA) * Math.min(1, dt * 5));
-  camX = c.x - Math.cos(camA) * CAMD; camY = c.y - Math.sin(camA) * CAMD;
+  const fx = Math.cos(camA), fy = Math.sin(camA);
+  camX = c.x - fx * CAMD; camY = c.y - fy * CAMD;
+  // kamera yerden yükseklikte kalır, yokuşa bakarken eğilir
+  const hc = hAt(c.x, c.y), hb = hAt(camX, camY);
+  const zT = Math.max(hc, hb) + CAMH, sl = (hAt(c.x + fx * 40, c.y + fy * 40) - hb) / (40 + CAMD);
+  const pT = Math.atan(sl) * 0.75, kk = Math.min(1, dt * 6);
+  if (!isFinite(camZ) || Math.abs(camZ - zT) > 60) camZ = zT; else camZ += (zT - camZ) * Math.min(1, dt * 10);
+  camP += (pT - camP) * kk;
 }
 function updateAttract(dt, now) {
   let live = null;
@@ -950,31 +999,55 @@ function practiceResults() {
 /* =========================================================
    ÇİZİM
    ========================================================= */
-let ground, g32, haze;
+let ground, g32, haze, groundC, groundG;
+let camZ = CAMH, camP = 0, horizonY = HY, groundTop = H;
+const rowD = new Float32Array(H);
+// Her satır için kameradan çıkan ışını araziye çarpana kadar ilerlet (yokuş, tepe, çukur)
 function drawGround() {
   const fx = Math.cos(camA), fy = Math.sin(camA), rx = -fy, ry = fx;
-  for (let row = 1; row < H - HY; row++) {
-    const dist = CAMH * F / row, sc = dist / F;
-    let wx = camX + fx * dist - rx * sc * W / 2, wy = camY + fy * dist - ry * sc * W / 2;
-    const dx = rx * sc, dy = ry * sc;
-    let o = row * W;
-    if (dist > 420) {
-      let mx = wx / 4, my = wy / 4; const mdx = dx / 4, mdy = dy / 4;
-      for (let x = 0; x < W; x++) { const tx = mx | 0, ty = my | 0; g32[o++] = (tx >= 0 && ty >= 0 && tx < MIPS && ty < MIPS) ? mip[ty * MIPS + tx] : OUTCOL; mx += mdx; my += mdy; }
-    } else {
-      for (let x = 0; x < W; x++) { const tx = wx | 0, ty = wy | 0; g32[o++] = (tx >= 0 && ty >= 0 && tx < TS && ty < TS) ? tex[ty * TS + tx] : OUTCOL; wx += dx; wy += dy; }
-    }
+  const tp = Math.tan(camP), MAXD = 1700;
+  let d = 4, y = H - 1;
+  for (; y >= 0; y--) {
+    const sv = (y - HY) / F, t = (sv - tp) / (1 + sv * tp);
+    let hit = false;
+    while (d < MAXD) { if (camZ - d * t <= hAt(camX + fx * d, camY + fy * d)) { hit = true; break; } d += d < 60 ? 0.6 : d * 0.012; }
+    let dist = d;
+    if (!hit) { const dd = t !== 0 ? (camZ - HFAR) / t : -1; if (dd > MAXD) dist = dd; else break; }
+    rowD[y] = dist; drawRow(y, dist, fx, fy, rx, ry);
   }
-  for (let x = 0; x < W; x++) g32[x] = g32[W + x];
-  ctx.putImageData(ground, 0, HY);
-  ctx.fillStyle = haze; ctx.fillRect(0, HY, W, 46);
+  groundTop = y + 1;
+  for (let yy = 0; yy <= y; yy++) rowD[yy] = Infinity;
+  if (groundTop > 0) g32.fill(0, 0, groundTop * W);
+  groundG.putImageData(ground, 0, 0);
+  ctx.drawImage(groundC, 0, 0);
+  ctx.fillStyle = haze; ctx.save(); ctx.translate(0, Math.round(horizonY - HY)); ctx.fillRect(0, HY, W, 46); ctx.restore();
+}
+function drawRow(row, dist, fx, fy, rx, ry) {
+  const sc = dist / F;
+  let wx = camX + fx * dist - rx * sc * W / 2, wy = camY + fy * dist - ry * sc * W / 2;
+  const dx = rx * sc, dy = ry * sc;
+  let o = row * W;
+  if (dist > 420) {
+    let mx = wx / 4, my = wy / 4; const mdx = dx / 4, mdy = dy / 4;
+    for (let x = 0; x < W; x++) { const tx = mx | 0, ty = my | 0; g32[o++] = (tx >= 0 && ty >= 0 && tx < MIPS && ty < MIPS) ? mip[ty * MIPS + tx] : OUTCOL; mx += mdx; my += mdy; }
+  } else {
+    for (let x = 0; x < W; x++) { const tx = wx | 0, ty = wy | 0; g32[o++] = (tx >= 0 && ty >= 0 && tx < TS && ty < TS) ? tex[ty * TS + tx] : OUTCOL; wx += dx; wy += dy; }
+  }
+}
+// derinliği verilen bir nesnenin, önündeki tepe yüzünden görünmeyen kısmı: bu satırın altı örtülü
+function clipY(depth) {
+  const lim = depth * 0.97 - 2;
+  let lo = groundTop, hi = H;           // rowD aşağı doğru küçülür
+  while (lo < hi) { const m = (lo + hi) >> 1; if (rowD[m] < lim) hi = m; else lo = m + 1; }
+  return lo;
 }
 function proj(x, y) {
   const fx = Math.cos(camA), fy = Math.sin(camA);
   const dx = x - camX, dy = y - camY, depth = dx * fx + dy * fy;
   if (depth < 5) return null;
   const lat = dx * -fy + dy * fx, k = F / depth;
-  return { sx: W / 2 + lat * k, gy: HY + CAMH * k, k, depth };
+  const z = hAt(camX + fx * depth, camY + fy * depth), b = (camZ - z) / depth, tp = Math.tan(camP);
+  return { sx: W / 2 + lat * k, gy: HY + F * (b + tp) / (1 - b * tp), k, depth };
 }
 function sprAt(img, p, ww, lift = 0) {
   const dw = ww * p.k, dh = dw * img.height / img.width;
@@ -983,7 +1056,10 @@ function sprAt(img, p, ww, lift = 0) {
 function drawWorld(list, target) {
   const now = performance.now(), viewer = me || demo;
   const off = ((camA / TAU * PW) % PW + PW) % PW;
-  ctx.drawImage(pano, -Math.round(off), 0); ctx.drawImage(pano, PW - Math.round(off), 0);
+  horizonY = HY + F * Math.tan(camP); const py = Math.round(horizonY - HY);
+  if (py > 0) { ctx.fillStyle = TH.sky[0]; ctx.fillRect(0, 0, W, py); }
+  ctx.drawImage(pano, -Math.round(off), py); ctx.drawImage(pano, PW - Math.round(off), py);
+  if (py < 0) { ctx.fillStyle = TH.sky[TH.sky.length - 1]; ctx.fillRect(0, HY + py, W, -py + 1); }
   drawGround();
   const items = [];
   const add = (x, y, t, o, maxD) => { const p = proj(x, y); if (p && p.depth < maxD) items.push({ p, o, t }); };
@@ -998,6 +1074,16 @@ function drawWorld(list, target) {
   items.sort((a, b) => b.p.depth - a.p.depth);
   for (const it of items) {
     const { p, o } = it;
+    const cy = it.t === 4 ? H : clipY(p.depth);
+    if (cy < p.gy - 0.5) {                       // tepenin arkasında: kısmen ya da tamamen gizli
+      if (cy < p.gy - 90 * p.k || cy <= 0) continue;
+      ctx.save(); ctx.beginPath(); ctx.rect(0, 0, W, cy); ctx.clip(); drawItem(it, now, viewer); ctx.restore();
+    } else drawItem(it, now, viewer);
+  }
+}
+function drawItem(it, now, viewer) {
+  const { p, o } = it;
+  {
     if (it.t === 0) sprAt(o.img, p, o.ww);
     else if (it.t === 1) {
       const dw = 6 * p.k, dh = dw * 10 / 8, bob = (Math.sin(gT * 4 + o.x) * 1.5 + 3) * p.k;
@@ -1409,6 +1495,7 @@ addEventListener('keydown', e => {
     if (k === 'escape' || k === 'p') togglePause();
     if ((k === 'e' || k === 'x' || k === 'q') && me && inGame) useItem(me);
     if ((k === ' ' || k === 'shift') && turboLatch && state === 'race') latched = !latched;
+    if (k === 'm') nextSong();
     if ((state === 'menu' || state === 'room') && (k === 'arrowleft' || k === 'arrowright')) {
       const i = CARS.findIndex(c => c.key === selCar); chooseCar(CARS[(i + (k === 'arrowright' ? 1 : 3)) % 4].key);
     }
@@ -1527,7 +1614,40 @@ function initAudio() {
     engGain = ac.createGain(); engGain.gain.value = 0; engGain.connect(ac.destination);
     eng = ac.createOscillator(); eng.type = 'square'; eng.frequency.value = 50; eng.connect(engGain); eng.start();
     eng2 = ac.createOscillator(); eng2.type = 'triangle'; eng2.frequency.value = 100; eng2.connect(engGain); eng2.start();
+    if (MUS) { MUS.init(ac, ac.destination); MUS.setVolume(muted ? 0 : mvol); MUS.onEnd = () => { if (musicSel === 'shuffle') playSong(randomSong()); }; playSong(musicSel === 'shuffle' ? randomSong() : musicSel); }
   } catch (e) { ac = null; }
+}
+/* ---------------- müzik ---------------- */
+const MUS = window.HGP_MUSIC;
+let musicSel = store.get('hgp-music', 'shuffle'), mvol = store.get('hgp-mvol', 0.45);
+const randomSong = () => { const l = MUS.songs.filter(s => s.id !== MUS.current); return l[Math.random() * l.length | 0].id; };
+function playSong(id) {
+  if (!MUS || !ac) return;
+  if (id === 'off' || !id) { MUS.stop(); renderSongs(); return; }
+  MUS.play(id); renderSongs();
+  const s = MUS.songs.find(x => x.id === id); if (s && (state === 'race' || state === 'count')) flash('♪ ' + s.name.toLocaleUpperCase('tr'), '#3fd0f0');
+}
+function nextSong() {
+  if (!MUS) return; initAudio();
+  const ids = MUS.songs.map(s => s.id), i = ids.indexOf(MUS.current);
+  playSong(ids[(i + 1) % ids.length]);
+}
+function renderSongs() {
+  const el = $('songList'); if (!el || !MUS) return; el.textContent = '';
+  const opts = [{ id: 'shuffle', name: 'KARIŞIK', mood: 'Her şarkı bitince başka biri' }, ...MUS.songs, { id: 'off', name: 'KAPALI', mood: 'Sadece motor ve efektler' }];
+  for (const o of opts) {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'song';
+    const on = o.id === musicSel || (musicSel === 'shuffle' && o.id === MUS.current);
+    b.setAttribute('aria-pressed', String(on));
+    const t = document.createElement('b'); t.textContent = o.name.toLocaleUpperCase('tr'); const m = document.createElement('span'); m.textContent = o.mood;
+    b.append(t, m);
+    b.onclick = () => { initAudio(); musicSel = o.id; store.set('hgp-music', o.id); playSong(o.id === 'shuffle' ? (MUS.current || randomSong()) : o.id); };
+    el.append(b);
+  }
+}
+if (MUS) {
+  $('mvol').value = Math.round(mvol * 100);
+  $('mvol').oninput = () => { mvol = $('mvol').value / 100; store.set('hgp-mvol', mvol); if (!muted) MUS.setVolume(mvol); };
 }
 function sfx(type) {
   if (!ac || muted) return;
@@ -1559,7 +1679,7 @@ function updateEngine() {
 }
 const muteSync = () => { $('muteBtn').setAttribute('aria-pressed', String(muted)); $('muteBtn').title = muted ? 'Ses kapalı' : 'Ses açık'; $('muteBtn').style.opacity = muted ? .5 : 1; };
 muteSync();
-$('muteBtn').onclick = () => { initAudio(); muted = !muted; store.set('hgp-mute', muted); muteSync(); if (muted && engGain) engGain.gain.value = 0; };
+$('muteBtn').onclick = () => { initAudio(); muted = !muted; store.set('hgp-mute', muted); muteSync(); if (muted && engGain) engGain.gain.value = 0; if (MUS) MUS.setVolume(muted ? 0 : mvol); };
 
 /* =========================================================
    TAM EKRAN, YATAY KİLİT, ÇEKMECELER, TELEFON KONTROLLERİ
@@ -1592,12 +1712,13 @@ addEventListener('pointerdown', firstGesture, true);
 addEventListener('keydown', e => { if (e.key !== 'Escape' && e.key !== 'F11') firstGesture(e); }, true);
 
 // çekmeceler
-const drawers = { board: $('drawerBoard'), set: $('drawerSet') };
+const drawers = { board: $('drawerBoard'), set: $('drawerSet'), music: $('drawerMusic') };
 const openDrawer = k => { for (const d of Object.values(drawers)) d.hidden = true; drawers[k].hidden = false; const b = drawers[k].querySelector('[data-close]'); if (b) b.focus(); };
 const closeDrawers = () => { for (const d of Object.values(drawers)) d.hidden = true; };
 const drawerOpen = () => Object.values(drawers).some(d => !d.hidden);
 $('boardBtn').onclick = () => openDrawer('board');
 $('setBtn').onclick = () => openDrawer('set');
+$('musicBtn').onclick = () => { initAudio(); renderSongs(); openDrawer('music'); };
 for (const d of Object.values(drawers)) {
   d.addEventListener('click', e => { if (e.target === d || e.target.closest('[data-close]')) closeDrawers(); });
 }
@@ -1673,7 +1794,7 @@ async function init() {
   buildCars();
   buildArt();
   for (const k of TRACK_KEYS) THUMBS[k] = trackThumb(k, 64, 40);
-  ground = ctx.createImageData(W, H - HY); g32 = new Uint32Array(ground.data.buffer);
+  [groundC, groundG] = mk(W, H); ground = groundG.createImageData(W, H); g32 = new Uint32Array(ground.data.buffer);
   useTrack(pcfg.track !== 'random' ? pcfg.track : 'istanbul');
   buildPicker($('carsEntry')); buildPicker($('carsRoom')); syncPickers();
   cfgRoomUI = cfgUI($('cfgRoom'), patch => { if (room && room.host === myId) send({ type: 'cfg', cfg: Object.assign({}, CFG_DEF, room.cfg, patch) }); });
