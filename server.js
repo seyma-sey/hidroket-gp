@@ -50,19 +50,33 @@ const server = http.createServer((req, res) => {
 let board = { tracks: {} };
 let saveTimer = null;
 async function loadBoard() {
+  let ok = false;
   try {
     if (UPSTASH_URL) {
       const r = await fetch(UPSTASH_URL + "/get/" + LB_KEY, { headers: { Authorization: "Bearer " + UPSTASH_TOKEN } });
       const j = await r.json();
       if (j && j.result) board = JSON.parse(j.result);
+      if (j && 'result' in j) ok = true;
       console.log("Skor tablosu Upstash'ten yüklendi.");
     } else if (fs.existsSync(DATA_FILE)) {
       board = JSON.parse(fs.readFileSync(DATA_FILE, "utf8"));
+      ok = true;
       console.log("Skor tablosu dosyadan yüklendi.");
-    }
+    } else ok = true;
   } catch (e) { console.warn("Skor tablosu yüklenemedi:", e.message); }
   if (!board || typeof board.tracks !== "object") board = { tracks: {} };   // eski kampüs pistinin kayıtları bırakılır
   for (const t of TRACKS) { const b = board.tracks[t] = board.tracks[t] || {}; b.laps = Array.isArray(b.laps) ? b.laps : []; b.races = Array.isArray(b.races) ? b.races : []; }
+  // tek seferlik: nerf öncesi Halis'in scooterı kayıtları adaletsizdi, silinir (yükleme başarılıysa)
+  if (ok) {
+    board.done = Array.isArray(board.done) ? board.done : [];
+    if (!board.done.includes("halis-nerf")) {
+      let n = 0;
+      for (const t in board.tracks) for (const k of ["laps", "races"]) { const l = board.tracks[t][k]; if (!Array.isArray(l)) continue;
+        const keep = l.filter(e => e.car !== "halis"); n += l.length - keep.length; board.tracks[t][k] = keep; }
+      board.done.push("halis-nerf"); saveBoard();
+      console.log("Halis'in scooterı kayıtları silindi:", n);
+    }
+  }
 }
 function saveBoard() {
   clearTimeout(saveTimer);
