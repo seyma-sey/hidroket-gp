@@ -76,16 +76,15 @@ const CARS = [
   // gücü birkaç saniyede bir rastgele değişir; ortalamada dengeli
   { key: 'hk1', name: 'HİDROKET-1', num: '3', trait: 'Gizemli güç', col: '#ff7b00', myst: true, s: { top: .72, acc: .68, turn: .66, grip: .66 } },
   // normalde en yavaş, turboda en hızlı
-  { key: 'halis', name: "HALİS'İN SCOOTERI", short: 'HALİS', trait: 'Turbo canavarı', col: '#2f4fd8', tb: [1.9, 2.5], regen: 8, s: { top: .4, acc: .62, turn: .95, grip: .85 } }
+  { key: 'halis', name: "HALİS'İN SCOOTERI", short: 'HALİS', trait: 'Turbo canavarı', col: '#2f4fd8', tb: [1.9, 2.5], pick: 25, eager: true, s: { top: .4, acc: .62, turn: .95, grip: .85 } }
 ];
 const cname = d => d.short || d.name;
-// Gizemli güç kademeleri: [çarpan, yazı, renk, olasılık]
+// Gizemli güç kademeleri: [çarpan, ad, renk, olasılık]. Oyuncuya gösterilmez; hızdan sezilir.
 const MYST = [[1.38, 'AŞIRI GÜÇ!', '#c792ea', .15], [1.16, 'GÜÇ ARTTI', '#5fd16b', .25], [1, 'NORMAL', '#e6eef5', .28], [.84, 'GÜÇ DÜŞTÜ', '#ffb03b', .2], [.68, 'GÜÇ ÇEKİLDİ', '#ff6a5e', .12]];
 function rollMyst(c) {
   let x = Math.random(), t = MYST[2];
   for (const m of MYST) { x -= m[3]; if (x <= 0) { t = m; break; } }
   c.mmT = t[0]; c.mTier = t; c.mT = 3.5 + Math.random() * 3.5;
-  if (c === me) { flash('GİZEMLİ GÜÇ: ' + t[1], t[2]); sfx(t[0] > 1 ? 'box' : 'beep'); }
 }
 const CARK = Object.fromEntries(CARS.map(c => [c.key, c]));
 let selCar = CARK[store.get('hgp-car', 'turaz')] ? store.get('hgp-car', 'turaz') : 'turaz';
@@ -206,39 +205,39 @@ function buildArt() {
    PİSTLER
    ========================================================= */
 const TRACKS = {
-  istanbul: { name: 'İSTANBUL PARK', short: 'İSTANBUL', tw: 56, theme: 'istanbul',
+  istanbul: { hk: 0.6, name: 'İSTANBUL PARK', short: 'İSTANBUL', tw: 56, theme: 'istanbul',
     cp: [[1150,1760],[800,1760],[470,1730],[330,1600],[350,1430],[500,1340],[650,1280],[700,1140],[600,1010],[430,930],
       [330,760],[380,560],[560,400],[820,320],[1080,340],[1260,470],[1300,660],[1200,820],[1150,980],[1290,1080],
       [1500,1030],[1680,920],[1820,1000],[1840,1220],[1720,1380],[1560,1430],[1480,1560],[1360,1700]],
     h: [34,34,28,8,4,10,22,30,26,18,12,16,26,34,40,44,40,30,22,16,22,34,46,48,42,36,34,34] },
-  monaco: { name: 'MONAKO', short: 'MONAKO', tw: 44, theme: 'monaco',
+  monaco: { hk: 0.6, name: 'MONAKO', short: 'MONAKO', tw: 44, theme: 'monaco',
     cp: [[950,1500],[660,1500],[450,1470],[370,1320],[420,1120],[500,920],[470,720],[540,540],[740,470],[900,560],
       [1010,710],[1150,660],[1220,530],[1320,590],[1270,740],[1390,880],[1620,900],[1820,980],[1860,1180],[1720,1270],
       [1640,1390],[1490,1430],[1400,1340],[1300,1430],[1190,1350],[1100,1440],[1050,1500]],
     h: [6,6,6,8,20,34,44,50,52,44,34,30,26,22,16,10,6,4,4,4,4,4,4,4,5,6,6] },
-  spa: { name: 'SPA', short: 'SPA', tw: 58, theme: 'spa',
+  spa: { hk: 0.38, name: 'SPA', short: 'SPA', tw: 58, theme: 'spa',
     cp: [[760,1680],[520,1720],[360,1650],[400,1530],[590,1470],[760,1370],[830,1240],[790,1110],[880,900],[1030,650],
       [1180,420],[1290,280],[1450,290],[1490,420],[1610,500],[1720,630],[1650,780],[1500,760],[1410,880],[1380,1030],
       [1460,1160],[1610,1210],[1740,1330],[1790,1510],[1690,1660],[1480,1740],[1200,1770],[1010,1740],[900,1700]],
     h: [44,44,42,30,16,6,30,46,56,66,74,80,80,70,60,52,44,38,28,20,14,10,8,10,18,28,36,42,44] },
-  monza: { name: 'MONZA', short: 'MONZA', tw: 56, theme: 'monza',
+  monza: { hk: 0.8, name: 'MONZA', short: 'MONZA', tw: 56, theme: 'monza',
     cp: [[250,1450],[250,1200],[250,950],[250,720],[267,620],[352,585],[381,520],[373,430],[417,300],[555,190],[758,140],[990,150],[1178,210],
       [1294,250],[1338,310],[1425,330],[1599,350],[1744,410],[1802,510],[1787,610],[1700,700],[1483,820],[1222,960],[990,1080],
       [874,1150],[801,1230],[714,1280],[656,1350],[642,1500],[642,1650],[613,1760],[468,1830],[308,1800],[257,1680]],
     h: [10,10,10,10,10,10,10,9,8,7,6,6,8,10,11,12,14,15,15,14,12,9,6,4,4,5,6,7,8,9,10,10,10,10] },
-  baku: { name: 'BAKÜ', short: 'BAKÜ', tw: 44, theme: 'baku',
+  baku: { hk: 0.7, name: 'BAKÜ', short: 'BAKÜ', tw: 44, theme: 'baku',
     cp: [[826,1650],[1166,1650],[1506,1650],[1737,1648],[1825,1613],[1846,1525],[1846,1300],[1832,1200],[1750,1175],[1574,1175],[1492,1163],
       [1465,1088],[1465,900],[1492,825],[1587,800],[1723,800],[1805,775],[1832,675],[1832,500],[1805,400],[1696,375],[1370,375],[1098,375],
       [962,350],[880,275],[798,263],[744,325],[662,350],[581,300],[499,213],[390,200],[282,225],[227,325],[214,550],[200,863],[227,1175],
       [309,1425],[445,1600],[608,1650]],
     h: [4,4,4,4,5,6,8,10,11,12,12,13,14,15,16,16,17,18,20,21,22,22,23,25,28,30,30,29,28,28,27,26,24,20,14,9,6,4,4] },
-  silverstone: { name: 'SILVERSTONE', short: 'SILVERSTONE', tw: 56, theme: 'silverstone',
+  silverstone: { hk: 0.8, name: 'SILVERSTONE', short: 'SILVERSTONE', tw: 56, theme: 'silverstone',
     cp: [[311,1685],[311,1461],[333,1304],[398,1214],[441,1125],[462,1046],[549,1013],[635,990],[657,923],[603,878],[527,834],[462,699],
       [419,542],[398,430],[333,363],[246,341],[214,262],[268,195],[365,184],[506,195],[776,206],[1046,218],[1218,251],[1316,330],
       [1370,408],[1456,442],[1521,520],[1542,610],[1607,677],[1672,856],[1715,1080],[1737,1304],[1737,1461],[1672,1550],[1542,1595],[1456,1640],
       [1262,1685],[992,1752],[830,1774],[743,1842],[635,1842],[462,1864],[344,1808]],
     h: [10,10,10,11,12,12,12,12,13,13,13,14,15,16,16,16,16,15,14,13,12,11,10,10,9,9,8,8,8,8,8,8,8,8,8,8,9,9,10,10,10,10,10] },
-  podyum: { name: 'PODYUM PARK', short: 'PODYUM', tw: 42, theme: 'podyum',
+  podyum: { hk: 0.6, name: 'PODYUM PARK', short: 'PODYUM', tw: 42, theme: 'podyum',
     cp: [[597,1722],[1047,1722],[1422,1707],[1617,1617],[1647,1437],[1497,1347],[1272,1362],[1122,1272],[1137,1107],[1272,987],[1497,957],[1677,867],
       [1722,687],[1617,537],[1422,522],[1272,627],[1107,687],[942,597],[897,432],[777,327],[582,357],[447,507],[477,717],[627,837],
       [747,987],[657,1137],[447,1167],[327,1317],[357,1542],[447,1677]],
@@ -386,7 +385,7 @@ function useTrack(key) {
   const P = centerline(T.cp, T.h);
   NS = P.length;
   SX = new Float32Array(NS); SY = new Float32Array(NS); SZ = new Float32Array(NS); TX = new Float32Array(NS); TY = new Float32Array(NS); KV = new Float32Array(NS); GRAV = new Uint8Array(NS);
-  for (let i = 0; i < NS; i++) { SX[i] = P[i][0]; SY[i] = P[i][1]; SZ[i] = P[i][2] || 0; }
+  for (let i = 0; i < NS; i++) { SX[i] = P[i][0]; SY[i] = P[i][1]; SZ[i] = (P[i][2] || 0) * (T.hk || 1); }   // hk: pistin eğim çarpanı
   for (let i = 0; i < NS; i++) { const a = P[(i - 1 + NS) % NS], b = P[(i + 1) % NS]; const l = Math.hypot(b[0] - a[0], b[1] - a[1]); TX[i] = (b[0] - a[0]) / l; TY[i] = (b[1] - a[1]) / l; }
   const Kr = new Float32Array(NS);
   for (let i = 0; i < NS; i++) { const a = (i - 4 + NS) % NS, b = (i + 4) % NS; Kr[i] = wrapA(Math.atan2(TY[b], TX[b]) - Math.atan2(TY[a], TX[a])) / (8 * SPACING); }
@@ -436,6 +435,9 @@ function buildHeight() {
   }
   HFAR = sum / N;
 }
+// çizim için yükseklik: ayarlardan eğimli görüntü kapatılırsa düz zemin (fizik herkes için aynı kalır)
+let elevView = store.get('hgp-elev', true);
+const hR = (x, y) => elevView ? hAt(x, y) : 0;
 function hAt(x, y) {
   let gx = x / HMR - .5, gy = y / HMR - .5;
   gx = gx < 0 ? 0 : gx > HMN - 1.001 ? HMN - 1.001 : gx; gy = gy < 0 ? 0 : gy > HMN - 1.001 ? HMN - 1.001 : gy;
@@ -706,7 +708,7 @@ function buildCars() {
 const SURF = { road: { top: 1, drag: 0.15, grip: 1 }, curb: { top: 0.96, drag: 0.22, grip: 0.92 }, grass: { top: 0.55, drag: 1.0, grip: 0.68 },
   gravel: { top: 0.38, drag: 2.2, grip: 0.5 }, runoff: { top: 0.9, drag: 0.32, grip: 0.9 }, wall: { top: 0.9, drag: 0.4, grip: 0.9 } };
 const SURFS = ['road', 'curb', 'grass', 'gravel', 'runoff', 'wall'];
-const TB_DEF = [1.35, 1.8];
+const TB_DEF = [1.35, 1.8], SPIN_T = 1.1;
 const statsOf = s => ({ top: 230 + 90 * s.top, acc: 110 + 130 * s.acc, turn: 2.1 + 1.3 * s.turn, grip: 4.5 + 7 * s.grip });
 function makeCar(def, slot, kind) {
   const gp = gridPos(slot);
@@ -734,8 +736,13 @@ function stepCar(c, inp, dt) {
   const steerEff = Math.min(1, spd / 45) * (1 - 0.32 * Math.min(1, spd / st.top));
   // turboda hız %35 artıyor; direksiyon da güçlenmezse dönüş yarıçapı açılıp araç viraja giremiyordu
   c.av = inp.steer * st.turn * steerEff * (c.turboOn ? 1.3 : 1) * (vf < -2 ? -1 : 1);
-  if (c.spinT > 0) c.av = c.spinDir * 9;
-  c.a = wrapA(c.a + c.av * dt);
+  if (c.spinT > 0 && c.spinA0 != null) {          // yağ lekesi: tam 360° dönüp eski yönünde biter
+    const pr = 1 - c.spinT / SPIN_T, e = pr * pr * (3 - 2 * pr), na = wrapA(c.spinA0 + c.spinDir * TAU * e);
+    c.av = wrapA(na - c.a) / dt; c.a = na;
+  } else {
+    if (c.spinA0 != null) { c.a = c.spinA0; c.spinA0 = null; }
+    c.a = wrapA(c.a + c.av * dt);
+  }
   let grip = st.grip * sf.grip * (!c.turboOn && inp.thr > 0.5 && Math.abs(inp.steer) > 0.6 && spd > st.top * 0.7 ? 0.6 : 1);
   if (c.spinT > 0) grip *= 0.25;
   vl *= Math.exp(-grip * dt);
@@ -787,7 +794,7 @@ function aiDrive(c, dt, ref) {
   // düzlükte aracın o anki gerçek azami hızına (turbo, gizemli güç) kadar çıkar; virajda tabana göre yavaşlar
   const effTop = c.stats.top * (c.turboOn ? (c.def.tb || TB_DEF)[0] : 1) * (c.def.myst ? c.mm : 1);
   const target = (cf >= 1 ? Math.max(c.stats.top, effTop) : c.stats.top * cf) * skill;
-  return { steer: clamp(diff * 3, -1, 1), thr: vf < target ? 1 : vf > target * 1.08 ? -0.6 : 0.15, turbo: c.def.regen ? (c.turbo > 8 && km < 0.007) : (c.turbo > 50 && km < 0.003 && vf > target * 0.8) };
+  return { steer: clamp(diff * 3, -1, 1), thr: vf < target ? 1 : vf > target * 1.08 ? -0.6 : 0.15, turbo: c.def.eager ? (c.turbo > 8 && km < 0.007) : (c.turbo > 50 && km < 0.003 && vf > target * 0.8) };
 }
 function collide(list) {
   if (race.collide) for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) {
@@ -907,8 +914,8 @@ function rollItem(c) {
 }
 function useItem(c) {
   const it = c.item; if (!it || state !== 'race' || c.finished) return; c.item = null;
-  if (it === 'turbo') c.turbo = Math.min(100, c.turbo + 50);
-  else if (it === 'super') { c.turbo = 100; c.boostT = 1.8; }
+  if (it === 'turbo') c.turbo = Math.min(100, c.turbo + (c.def.pick ? 25 : 50));
+  else if (it === 'super') { c.turbo = c.def.pick ? Math.min(100, c.turbo + 50) : 100; c.boostT = 1.8; }
   else if (it === 'shield') c.shieldT = 6;
   else if (it === 'oil') {
     const x = c.x - Math.cos(c.a) * 13, y = c.y - Math.sin(c.a) * 13;
@@ -933,14 +940,14 @@ function applyZap(from, p, name) {
 }
 function spinOut(c) {
   if (c.shieldT > 0) { if (c === me) flash('KALKAN KORUDU', '#3fd0f0'); return; }
-  c.spinT = 0.9; c.spinDir = Math.random() < .5 ? -1 : 1; c.vx *= 0.55; c.vy *= 0.55;
+  c.spinT = SPIN_T; c.spinA0 = c.a; c.spinDir = Math.random() < .5 ? -1 : 1; c.vx *= 0.55; c.vy *= 0.55;
   if (c === me) { flash('KAYDIN!', '#ff6a5e'); shake = 0.3; sfx('crash'); }
 }
 function removeHaz(id) { const i = haz.findIndex(h => h.id === id); if (i >= 0) haz.splice(i, 1); }
 function interact(c, now) {
   for (const p of pickups) {
     if (p.tk.get(c) > now || sq(c.x - p.x) + sq(c.y - p.y) > 100) continue;
-    p.tk.set(c, now + 4000); c.turbo = Math.min(100, c.turbo + 45);
+    p.tk.set(c, now + 4000); c.turbo = Math.min(100, c.turbo + (c.def.pick || 45));
     if (c === me) { sfx('pick'); flash('+H2 TURBO', '#3fd0f0'); }
   }
   for (const b of boxes) {
@@ -989,11 +996,11 @@ function updRemote(c, now) {
   c.vf = s1.v; c.flags = s1.fl; c.turboOn = !!(s1.fl & 1); c.f = s1.f; c.surf = SURFS[s1.s | 0] || 'road'; c.lap = s1.lap;
   c.idx = clamp(Math.round(c.f * NS), 0, NS - 1);
 }
-const flagsOf = c => (c.turboOn ? 1 : 0) | (c.shieldT > 0 ? 2 : 0) | (c.spinT > 0 ? 4 : 0) | (c.zapT > 0 ? 8 : 0) | (c.mm > 1.08 ? 16 : 0) | (c.mm < .92 ? 32 : 0);
+const flagsOf = c => (c.turboOn ? 1 : 0) | (c.shieldT > 0 ? 2 : 0) | (c.spinT > 0 ? 4 : 0) | (c.zapT > 0 ? 8 : 0);
 
 /* ---------------- ana güncelleme ---------------- */
 function update(dt) {
-  gT += dt;
+  gT += dt; if (state === 'results') resT += dt;
   const now = performance.now();
   joyMenuNav();
   for (const f of feed) f.life -= dt; while (feed.length && feed[0].life <= 0) feed.shift();
@@ -1017,7 +1024,6 @@ function update(dt) {
     if (c.spinT > 0) inp = { steer: 0, thr: 0, turbo: false };
     c.turboOn = c.boostT > 0 || (!!inp.turbo && c.turbo > 0 && speedF(c) > 20);
     if (c.turboOn && c.boostT <= 0) { c.turbo = Math.max(0, c.turbo - 30 * dt); }
-    else if (c.def.regen && state === 'race') c.turbo = Math.min(100, c.turbo + c.def.regen * dt);   // scooter bataryası kendini doldurur
     if (c === me && c.turboOn && !me.wasTurbo) sfx('turbo');
     if (c === me) me.wasTurbo = c.turboOn;
     if (racing && c.item && (c.kind === 'ai' || BOT)) { c.itemT -= dt; if (c.itemT <= 0 && state === 'race') useItem(c); }
@@ -1036,9 +1042,6 @@ function update(dt) {
   for (const c of cars) {
     const tb = c.kind === 'remote' ? !!(c.flags & 1) : c.turboOn;
     if (tb && Math.random() < 0.5) particles.push({ x: c.x - Math.cos(c.a) * 9, y: c.y - Math.sin(c.a) * 9, life: 0.3, max: 0.3, col: '#ffb03b' });
-    const fl = c.kind === 'remote' ? c.flags : flagsOf(c);
-    if ((fl & 16) && Math.random() < 0.6) particles.push({ x: c.x - Math.cos(c.a) * 8 + (Math.random() - .5) * 6, y: c.y - Math.sin(c.a) * 8 + (Math.random() - .5) * 6, life: 0.4, max: 0.4, col: Math.random() < .5 ? '#c792ea' : '#ffffff' });
-    if ((fl & 32) && Math.random() < 0.35) particles.push({ x: c.x - Math.cos(c.a) * 8, y: c.y - Math.sin(c.a) * 8, life: 0.6, max: 0.6, col: '#7d858c' });
     const zp = c.kind === 'remote' ? !!(c.flags & 8) : c.zapT > 0;
     if (zp && Math.random() < 0.5) particles.push({ x: c.x + (Math.random() - .5) * 8, y: c.y + (Math.random() - .5) * 8, life: 0.25, max: 0.25, col: '#ffd84a' });
   }
@@ -1046,7 +1049,7 @@ function update(dt) {
   for (let i = haz.length - 1; i >= 0; i--) if (now - haz[i].t0 > 30000) haz.splice(i, 1);
   stepParticles(dt);
   if (racing) raceT = mode === 'online' ? (now - goAt) / 1000 : raceT + dt;
-  if (state === 'finish') { finishT += dt; if (mode === 'practice' && finishT > 2.5) { results = practiceResults(); state = 'results'; } }
+  if (state === 'finish') { finishT += dt; if (mode === 'practice' && finishT > 2.5) startResults(practiceResults()); }
   if (mode === 'online' && me && (state === 'count' || racing)) {
     sendT -= dt;
     if (sendT <= 0) { sendT = 0.05;
@@ -1061,12 +1064,13 @@ function stepParticles(dt) {
   if (particles.length > 260) particles.splice(0, particles.length - 260);
 }
 function followCam(c, dt) {
-  camA = wrapA(camA + wrapA(c.a - camA) * Math.min(1, dt * 5));
+  const ta = c.spinT > 0 && c.spinA0 != null ? c.spinA0 : c.a;    // dönerken kamera sabit: dönüş görünsün
+  camA = wrapA(camA + wrapA(ta - camA) * Math.min(1, dt * 5));
   const fx = Math.cos(camA), fy = Math.sin(camA);
   camX = c.x - fx * CAMD; camY = c.y - fy * CAMD;
   // kamera yerden yükseklikte kalır, yokuşa bakarken eğilir
-  const hc = hAt(c.x, c.y), hb = hAt(camX, camY);
-  const zT = Math.max(hc, hb) + CAMH, sl = (hAt(c.x + fx * 40, c.y + fy * 40) - hb) / (40 + CAMD);
+  const hc = hR(c.x, c.y), hb = hR(camX, camY);
+  const zT = Math.max(hc, hb) + CAMH, sl = (hR(c.x + fx * 40, c.y + fy * 40) - hb) / (40 + CAMD);
   const pT = Math.atan(sl) * 0.75, kk = Math.min(1, dt * 6);
   if (!isFinite(camZ) || Math.abs(camZ - zT) > 60) camZ = zT; else camZ += (zT - camZ) * Math.min(1, dt * 10);
   camP += (pT - camP) * kk;
@@ -1102,9 +1106,9 @@ function drawGround() {
   for (; y >= 0; y--) {
     const sv = (y - HY) / F, t = (sv - tp) / (1 + sv * tp);
     let hit = false;
-    while (d < MAXD) { if (camZ - d * t <= hAt(camX + fx * d, camY + fy * d)) { hit = true; break; } d += d < 60 ? 0.6 : d * 0.012; }
+    while (d < MAXD) { if (camZ - d * t <= hR(camX + fx * d, camY + fy * d)) { hit = true; break; } d += d < 60 ? 0.6 : d * 0.012; }
     let dist = d;
-    if (!hit) { const dd = t !== 0 ? (camZ - HFAR) / t : -1; if (dd > MAXD) dist = dd; else break; }
+    if (!hit) { const dd = t !== 0 ? (camZ - (elevView ? HFAR : 0)) / t : -1; if (dd > MAXD) dist = dd; else break; }
     rowD[y] = dist; drawRow(y, dist, fx, fy, rx, ry);
   }
   groundTop = y + 1;
@@ -1138,7 +1142,7 @@ function proj(x, y) {
   const dx = x - camX, dy = y - camY, depth = dx * fx + dy * fy;
   if (depth < 5) return null;
   const lat = dx * -fy + dy * fx, k = F / depth;
-  const z = hAt(camX + fx * depth, camY + fy * depth), b = (camZ - z) / depth, tp = Math.tan(camP);
+  const z = hR(camX + fx * depth, camY + fy * depth), b = (camZ - z) / depth, tp = Math.tan(camP);
   return { sx: W / 2 + lat * k, gy: HY + F * (b + tp) / (1 - b * tp), k, depth };
 }
 function sprAt(img, p, ww, lift = 0) {
@@ -1251,7 +1255,6 @@ function hud() {
   if (!mob) txt('TURBO', tbx, tby, '#9ecbef');
   txt('H2', tbx, tby + 12 - (mob ? 1 : 0), '#3fd0f0'); ctx.fillStyle = '#000'; ctx.fillRect(tbx + 22, tby + 11, 72, 10); ctx.fillStyle = '#20313f'; ctx.fillRect(tbx + 23, tby + 12, 70, 8);
   ctx.fillStyle = me.turboOn ? (Math.floor(gT * 10) % 2 ? '#ffd84a' : '#ff7a1a') : '#3fd0f0'; ctx.fillRect(tbx + 23, tby + 12, Math.round(me.turbo * 0.7), 8);
-  if (me.def.myst) { const t = me.mTier || MYST[2]; txt('GÜÇ x' + me.mm.toFixed(2), tbx + 98, tby + 12, t[2], 8); }
   const mx = W - MM - 4, my = mob ? 48 : H - MM - 4; ctx.drawImage(minimap, mx, my);
   for (const c of cars) { const x = mx + (c.x - mmScale.x0) * mmScale.s, y = my + (c.y - mmScale.y0) * mmScale.s, s = c === me ? 3 : 2;
     ctx.fillStyle = '#000'; ctx.fillRect(Math.round(x) - s, Math.round(y) - s, s + 2, s + 2); ctx.fillStyle = c.def.col; ctx.fillRect(Math.round(x) - s + 1, Math.round(y) - s + 1, s, s); }
@@ -1274,20 +1277,63 @@ function lights() {
   if (go) txt('BAŞLA!', W / 2, 58, '#5fd16b', 16, 'center');
   if (state === 'count') txt(TRACKS[race.track].name + ' · ' + race.laps + ' TUR', W / 2, 58, '#ffffff', 8, 'center');
 }
+// Yarış sonu: Kahoot tarzı podyum. Önce 3., sonra 2., en son 1. yükselir; araçlar üstünde döner.
+let resT = 0, confetti = [];
+function startResults(rows) {
+  results = rows; state = 'results'; resT = 0; confetti = [];
+  for (let i = 0; i < 90; i++) confetti.push({ x: Math.random() * W, y: -Math.random() * 160, vy: 28 + Math.random() * 40, vx: (Math.random() - .5) * 20, w: Math.random() * TAU,
+    col: ['#ffd84a', '#3fd0f0', '#ff6a5e', '#5fd16b', '#c792ea', '#ffffff'][i % 6] });
+}
+const POD = [   // sıra: 1., 2., 3.
+  { x: 152, w: 80, h: 66, col: '#ffd84a', dark: '#b8962a', at: 2.9 },
+  { x: 66, w: 80, h: 46, col: '#d7dde3', dark: '#8f99a3', at: 1.7 },
+  { x: 238, w: 80, h: 32, col: '#e09a5a', dark: '#9a5f30', at: 0.6 }
+];
 function drawResults() {
-  const rows = results || [];
-  const h = 64 + rows.length * 14; const y0 = Math.max(4, (H - h) / 2 | 0);
-  panel(40, y0, 304, h);
-  txt('YARIŞ SONUCU', W / 2, y0 + 10, '#ffd84a', 16, 'center');
-  rows.forEach((r, i) => {
-    const y = y0 + 34 + i * 14, c = CARK[r.car] || CARS[0], mine = r.me || r.id === myId;
-    ctx.fillStyle = c.col; ctx.fillRect(52, y, 6, 8);
-    txt((i + 1) + '. ' + String(r.name).toLocaleUpperCase('tr').slice(0, 12), 63, y, mine ? '#ffd84a' : '#ffffff', 8);
-    txt(r.best ? fmt(r.best) : '', 262, y, '#8fa8bd', 8, 'right');
-    txt(r.finished ? fmt(r.total) : 'BİTİREMEDİ', 334, y, r.finished ? '#c3ccd4' : '#ff6a5e', 8, 'right');
-  });
+  const rows = results || [], base = 192;
+  // sahne: koyu arka plan, ışık hüzmeleri, zemin
+  const bg = ctx.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#0d2a4a'); bg.addColorStop(1, '#06121f'); ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+  for (const [x, a] of [[60, .07], [W / 2, .1], [W - 60, .07]]) { ctx.fillStyle = 'rgba(255,240,190,' + a + ')'; ctx.beginPath(); ctx.moveTo(x - 6, 0); ctx.lineTo(x + 6, 0); ctx.lineTo(x + 70, base); ctx.lineTo(x - 70, base); ctx.fill(); }
+  ctx.fillStyle = '#0f3456'; ctx.fillRect(0, base, W, H - base); ctx.fillStyle = '#2a94d8'; ctx.fillRect(0, base, W, 1);
+  logoBadge(ctx, 4, 4);
+  txt('PODYUM', W / 2, 8, '#ffd84a', 16, 'center');
+  txt(TRACKS[race.track] ? TRACKS[race.track].name : '', W / 2, 28, '#9ecbef', 8, 'center');
+  const prev = resT - (1 / 60);
+  for (let k = 2; k >= 0; k--) {
+    const r = rows[k], P = POD[k]; if (!r) continue;
+    const t = clamp((resT - P.at) / 0.45, 0, 1), e = 1 - Math.pow(1 - t, 3), h = Math.round(P.h * e);
+    if (prev < P.at && resT >= P.at) sfx(k === 0 ? 'go' : 'lap');
+    if (h <= 0) { if (k === 0 && resT > 1.9) txt('...', P.x + P.w / 2, base - 20, '#ffd84a', 16, 'center'); continue; }
+    const top = base - h;
+    ctx.fillStyle = P.dark; ctx.fillRect(P.x, top, P.w, h);
+    ctx.fillStyle = P.col; ctx.fillRect(P.x, top, P.w, Math.min(h, 6)); ctx.fillRect(P.x + 2, top + 6, P.w - 4, Math.max(0, h - 6));
+    ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.fillRect(P.x + P.w - 6, top + 6, 4, Math.max(0, h - 6));
+    if (h > 22) txt(String(k + 1), P.x + P.w / 2, top + 9, P.dark, 16, 'center');
+    if (h > 40 && r.finished) txt(fmt(r.total), P.x + P.w / 2, top + 30, '#3a2a10', 8, 'center');
+    if (t >= 1) {
+      const c = CARK[r.car] || CARS[0], mine = r.me || (r.id && r.id === myId);
+      const pop = clamp((resT - P.at - 0.45) / 0.3, 0, 1);
+      ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.fillRect(P.x + 12, top - 2, P.w - 24, 3);
+      M.renderCar(ctx, c.model, gT * 1.3 + k, (c.key === 'halis' ? 1.05 : .95) * (0.6 + 0.4 * pop), P.x + P.w / 2, top - 1, PITCH * 1.6);
+      const nm = String(r.name).toLocaleUpperCase('tr').slice(0, 11), cn = cname(c);
+      const same = nm === cn.toLocaleUpperCase('tr');
+      txt(nm, P.x + P.w / 2, top - (same ? 40 : 48), mine ? '#ffd84a' : '#ffffff', 8, 'center');
+      if (!same) txt(cn, P.x + P.w / 2, top - 39, c.col, 8, 'center');
+      if (mine) txt('SEN', P.x + P.w / 2, top - (same ? 50 : 58), '#ffd84a', 8, 'center');
+    }
+  }
+  // 1. açıklanınca konfeti
+  if (resT > POD[0].at && rows[0]) for (const q of confetti) {
+    const tt = resT - POD[0].at, y = q.y + q.vy * tt, x = q.x + q.vx * tt + Math.sin(tt * 3 + q.w) * 6;
+    if (y > H || y < 0) continue; ctx.fillStyle = q.col; ctx.fillRect(Math.round(x), Math.round(y), Math.sin(tt * 6 + q.w) > 0 ? 3 : 1, 2);
+  }
+  // 4. ve sonrası
+  if (resT > POD[0].at + 0.6 && rows.length > 3) {
+    const rest = rows.slice(3).map((r, i) => (i + 4) + '. ' + String(r.name).toLocaleUpperCase('tr').slice(0, 9) + (r.finished ? '' : ' (DNF)')).join('   ');
+    txt(rest, W / 2, base + 6, '#c3ccd4', 8, 'center');
+  }
   const msgTxt = mode === 'online' ? 'Lobiye dönülüyor…' : 'ENTER / BUTON: MENÜ';
-  if (Math.floor(gT * 2) % 2) txt(msgTxt, W / 2, y0 + h - 16, '#9ecbef', 8, 'center');
+  if (resT > POD[0].at + 1 && Math.floor(gT * 2) % 2) txt(msgTxt, W / 2, H - 9, '#9ecbef', 8, 'center');
 }
 function drawAttractHUD() {
   logoBadge(ctx, 4, 4);
@@ -1303,8 +1349,7 @@ function render() {
     let target = demo; if (spec.size) target = list.reduce((a, b) => progOf(b) > progOf(a) ? b : a);
     drawWorld(list, target); if (TH.rain && !reduced) drawRain(); ctx.restore(); drawAttractHUD(); return;
   }
-  drawWorld(cars, me);
-  if (TH.rain && !reduced) drawRain();
+  if (state !== 'results') { drawWorld(cars, me); if (TH.rain && !reduced) drawRain(); }
   ctx.restore();
   if (zapFlash > 0) { ctx.fillStyle = 'rgba(255,248,200,' + (zapFlash * 2) + ')'; ctx.fillRect(0, 0, W, H); }
   hud();
@@ -1532,7 +1577,7 @@ function onMsg(m) {
     }
     case 'grace': graceEnd = now + m.ms; break;
     case 'results':
-      if (mode === 'online' && me) { results = m.rows; state = 'results'; graceEnd = 0; }
+      if (mode === 'online' && me) { startResults(m.rows); graceEnd = 0; }
       break;
     case 'board': board = m.board; renderBoard(); break;
     case 'drop': haz.push({ id: m.id, x: m.x, y: m.y, owner: m.owner, t0: now }); break;
@@ -1552,6 +1597,8 @@ function onMsg(m) {
    GİRDİ
    ========================================================= */
 const BOT = params.has('bot');
+$('elevView').checked = elevView;
+$('elevView').onchange = () => { elevView = $('elevView').checked; store.set('hgp-elev', elevView); };
 let autoGas = store.get('hgp-autogas', false);
 let turboLatch = store.get('hgp-tlatch', false), latched = false;
 $('turboLatch').checked = turboLatch;
@@ -1563,6 +1610,7 @@ let lastInput = { steer: 0, thr: 0, turbo: false };
 function confirmAction() {
   initAudio();
   if (state === 'room' && room && room.host === myId && room.phase === 'lobby') send({ type: 'start' });
+  else if (state === 'results' && mode === 'practice' && resT < POD[0].at + 1) resT = POD[0].at + 1;   // ilk basış: podyumu hemen göster
   else if (state === 'results' && mode === 'practice') { mode = null; cars = []; me = null; state = 'menu'; showScreen('entry'); }
   else if (state === 'paused') state = prevState;
 }
@@ -1914,7 +1962,7 @@ window.__hgp = { get state() { return state; }, get room() { return room; }, get
       for (const k of ['boostT', 'shieldT', 'spinT', 'zapT']) if (c[k] > 0) c[k] = Math.max(0, c[k] - dt);
       if (c.def.myst) { c.mT -= dt; if (c.mT <= 0) rollMyst(c); c.mm += (c.mmT - c.mm) * Math.min(1, dt * 2.5); }
       c.turboOn = c.boostT > 0 || (!!inp.turbo && c.turbo > 0 && speedF(c) > 20);
-      if (c.turboOn && c.boostT <= 0) c.turbo = Math.max(0, c.turbo - 30 * dt); else if (c.def.regen) c.turbo = Math.min(100, c.turbo + c.def.regen * dt);
+      if (c.turboOn && c.boostT <= 0) c.turbo = Math.max(0, c.turbo - 30 * dt);
       stepCar(c, inp, dt); trackUpdate(c, true); interact(c, raceT * 1000); collide([c]);
     }
     const out = c.laps.map(x => +x.toFixed(2)); Object.assign({}, keep); state = keep.state; race = keep.race; raceT = keep.raceT; cars = keep.cars; me = keep.me;
