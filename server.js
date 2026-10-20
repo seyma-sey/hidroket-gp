@@ -14,8 +14,8 @@ const UPSTASH_URL = (process.env.UPSTASH_REDIS_REST_URL || "").trim().replace(/\
 const UPSTASH_TOKEN = (process.env.UPSTASH_REDIS_REST_TOKEN || "").trim().replace(/^"|"$/g, "");
 const LB_KEY = "hidroket-gp-leaderboard";
 
-const TRACKS = ["istanbul", "monaco", "spa", "monza", "baku"];
-const MIN_LAP = { istanbul: 12, monaco: 10, spa: 14, monza: 11, baku: 12 };   // saniye: bundan hızlı tur imkânsız
+const TRACKS = ["istanbul", "monaco", "spa", "monza", "baku", "silverstone", "podyum"];
+const MIN_LAP = { istanbul: 12, monaco: 10, spa: 14, monza: 11, baku: 12, silverstone: 12, podyum: 11 };   // saniye: bundan hızlı tur imkânsız
 const CFG_DEF = { track: "istanbul", laps: 3, items: 1, obst: 1, catchup: 1, collide: 1 };
 function cleanCfg(c) {
   c = c || {}; const n = (v, lo, hi, d) => Number.isInteger(v) && v >= lo && v <= hi ? v : d;
@@ -25,7 +25,7 @@ function cleanCfg(c) {
 const MAX_PLAYERS = 8;
 const FINISH_GRACE = 30000;    // ilk araç bitirince diğerlerine kalan süre (ms)
 const RACE_TIMEOUT = 6 * 60000;
-const CARS = ["turaz", "pars", "ucube", "heli"];
+const CARS = ["turaz", "pars", "ucube", "heli", "hk1", "halis"];
 const TICK = 50;               // durum yayını (ms)
 
 /* ---------------- statik dosyalar ---------------- */

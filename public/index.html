@@ -53,7 +53,8 @@ body{font-family:var(--f-body);font-size:14px;line-height:1.5;overflow:hidden;-w
 input[type=text]{font-family:var(--f-pix);font-size:13px;background:#061526;color:var(--ink);border:2px solid var(--line);padding:11px 12px;width:100%;min-width:0;border-radius:0}
 input[type=text]:focus{border-color:var(--blue);outline:none}
 input#code{text-transform:uppercase;letter-spacing:.3em;width:8.5em;flex:none}
-.cars{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.cars{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+@media (max-width:700px){.cars{grid-template-columns:repeat(3,minmax(0,1fr))}}
 .carbtn{background:#0b2238;border:2px solid var(--line);color:var(--ink);padding:6px 4px 8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
 .carbtn canvas{width:100%;max-width:120px;height:auto;aspect-ratio:2/1;image-rendering:pixelated}
 .carbtn .nm{font-family:var(--f-pix);font-size:8px;line-height:1.3}

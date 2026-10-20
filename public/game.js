@@ -72,8 +72,21 @@ const CARS = [
   { key: 'turaz', name: 'TUR-AZ', num: '36', trait: 'Dengeli', col: '#2a94d8', s: { top: .75, acc: .7, turn: .7, grip: .7 } },
   { key: 'pars', name: 'PARS', num: '616', trait: 'Son sürat', col: '#d0262f', s: { top: 1, acc: .6, turn: .55, grip: .6 } },
   { key: 'ucube', name: 'UCUBE', num: '7', trait: 'Patlayıcı ivme', col: '#f08a1c', s: { top: .6, acc: .95, turn: .7, grip: .6 } },
-  { key: 'heli', name: 'HELIANTHUS', num: '304', trait: 'Viraj ustası', col: '#c5cbd1', s: { top: .62, acc: .55, turn: .95, grip: .95 } }
+  { key: 'heli', name: 'HELIANTHUS', num: '304', trait: 'Viraj ustası', col: '#c5cbd1', s: { top: .62, acc: .55, turn: .95, grip: .95 } },
+  // gücü birkaç saniyede bir rastgele değişir; ortalamada dengeli
+  { key: 'hk1', name: 'HİDROKET-1', num: '3', trait: 'Gizemli güç', col: '#ff7b00', myst: true, s: { top: .72, acc: .68, turn: .66, grip: .66 } },
+  // normalde en yavaş, turboda en hızlı
+  { key: 'halis', name: "HALİS'İN SCOOTERI", short: 'HALİS', trait: 'Turbo canavarı', col: '#2f4fd8', tb: [1.9, 2.5], regen: 8, s: { top: .4, acc: .62, turn: .95, grip: .85 } }
 ];
+const cname = d => d.short || d.name;
+// Gizemli güç kademeleri: [çarpan, yazı, renk, olasılık]
+const MYST = [[1.38, 'AŞIRI GÜÇ!', '#c792ea', .15], [1.16, 'GÜÇ ARTTI', '#5fd16b', .25], [1, 'NORMAL', '#e6eef5', .28], [.84, 'GÜÇ DÜŞTÜ', '#ffb03b', .2], [.68, 'GÜÇ ÇEKİLDİ', '#ff6a5e', .12]];
+function rollMyst(c) {
+  let x = Math.random(), t = MYST[2];
+  for (const m of MYST) { x -= m[3]; if (x <= 0) { t = m; break; } }
+  c.mmT = t[0]; c.mTier = t; c.mT = 3.5 + Math.random() * 3.5;
+  if (c === me) { flash('GİZEMLİ GÜÇ: ' + t[1], t[2]); sfx(t[0] > 1 ? 'box' : 'beep'); }
+}
 const CARK = Object.fromEntries(CARS.map(c => [c.key, c]));
 let selCar = CARK[store.get('hgp-car', 'turaz')] ? store.get('hgp-car', 'turaz') : 'turaz';
 
@@ -218,9 +231,20 @@ const TRACKS = {
       [1465,1088],[1465,900],[1492,825],[1587,800],[1723,800],[1805,775],[1832,675],[1832,500],[1805,400],[1696,375],[1370,375],[1098,375],
       [962,350],[880,275],[798,263],[744,325],[662,350],[581,300],[499,213],[390,200],[282,225],[227,325],[214,550],[200,863],[227,1175],
       [309,1425],[445,1600],[608,1650]],
-    h: [4,4,4,4,5,6,8,10,11,12,12,13,14,15,16,16,17,18,20,21,22,22,23,25,28,30,30,29,28,28,27,26,24,20,14,9,6,4,4] }
+    h: [4,4,4,4,5,6,8,10,11,12,12,13,14,15,16,16,17,18,20,21,22,22,23,25,28,30,30,29,28,28,27,26,24,20,14,9,6,4,4] },
+  silverstone: { name: 'SILVERSTONE', short: 'SILVERSTONE', tw: 56, theme: 'silverstone',
+    cp: [[311,1685],[311,1461],[333,1304],[398,1214],[441,1125],[462,1046],[549,1013],[635,990],[657,923],[603,878],[527,834],[462,699],
+      [419,542],[398,430],[333,363],[246,341],[214,262],[268,195],[365,184],[506,195],[776,206],[1046,218],[1218,251],[1316,330],
+      [1370,408],[1456,442],[1521,520],[1542,610],[1607,677],[1672,856],[1715,1080],[1737,1304],[1737,1461],[1672,1550],[1542,1595],[1456,1640],
+      [1262,1685],[992,1752],[830,1774],[743,1842],[635,1842],[462,1864],[344,1808]],
+    h: [10,10,10,11,12,12,12,12,13,13,13,14,15,16,16,16,16,15,14,13,12,11,10,10,9,9,8,8,8,8,8,8,8,8,8,8,9,9,10,10,10,10,10] },
+  podyum: { name: 'PODYUM PARK', short: 'PODYUM', tw: 42, theme: 'podyum',
+    cp: [[597,1722],[1047,1722],[1422,1707],[1617,1617],[1647,1437],[1497,1347],[1272,1362],[1122,1272],[1137,1107],[1272,987],[1497,957],[1677,867],
+      [1722,687],[1617,537],[1422,522],[1272,627],[1107,687],[942,597],[897,432],[777,327],[582,357],[447,507],[477,717],[627,837],
+      [747,987],[657,1137],[447,1167],[327,1317],[357,1542],[447,1677]],
+    h: [10,10,12,16,20,22,22,24,26,28,30,32,34,34,32,30,30,32,34,34,32,28,24,22,20,18,16,14,12,10] }
 };
-const TRACK_KEYS = ['istanbul', 'monaco', 'spa', 'monza', 'baku'];
+const TRACK_KEYS = ['istanbul', 'monaco', 'spa', 'monza', 'baku', 'silverstone', 'podyum'];
 const SPACING = 6;
 function centerline(cp, hs) {
   const raw = [], n = cp.length, hh = i => hs ? hs[(i + n) % n] : 0;
@@ -329,6 +353,31 @@ const THEMES = {
   }
 };
 THEMES.monaco.seaY = 1602;
+THEMES.silverstone = {   // eski hava üssü: düz çayırlar, pist kalıntıları, mavi çizgili asfalt kaçış alanları
+  sky: ['#6f8fb5', '#7c9abd', '#89a5c4', '#97b0ca', '#a5bbd0', '#b3c5d5', '#c0cfd9', '#cbd6dd', '#d5dde0', '#dde2e2'],
+  haze: 'rgba(214,222,226,', out: [0x5a, 0x8f, 0x3e],
+  ground(g, r) {
+    g.fillStyle = '#5a8f3e'; g.fillRect(0, 0, TS, TS);
+    g.fillStyle = '#62983f'; for (let y = 0; y < TS; y += 80) g.fillRect(0, y, TS, 40);
+    for (let i = 0; i < 30000; i++) { g.fillStyle = r() < 0.5 ? '#507f37' : '#6aa24a'; g.fillRect(r() * TS | 0, r() * TS | 0, 2, 1); }
+    // eski uçak pisti kalıntıları
+    g.save(); g.translate(1000, 1050); g.rotate(-0.5); g.fillStyle = '#8b8e8f'; g.fillRect(-700, -22, 1400, 44); g.fillStyle = '#9da0a1'; for (let x = -690; x < 690; x += 40) g.fillRect(x, -1, 20, 2); g.restore();
+    g.save(); g.translate(1000, 1050); g.rotate(0.9); g.fillStyle = '#878a8b'; g.fillRect(-600, -20, 1200, 40); g.restore();
+  },
+  runoff: { col: '#6a6f75', dot: ['#62676d', '#74797f'], band: '#2a62b8', surf: 'runoff' }
+};
+THEMES.podyum = {        // Bursa: yemyeşil yamaç, kavaklar, arkada karlı Uludağ
+  sky: ['#2f7fd6', '#3c89da', '#4a93dd', '#5a9de0', '#6ba7e2', '#7db1e3', '#90bbe3', '#a3c5e2', '#b6cee0', '#c7d6de'],
+  haze: 'rgba(199,214,222,', out: [0x58, 0x92, 0x3a],
+  ground(g, r) {
+    g.fillStyle = '#58923a'; g.fillRect(0, 0, TS, TS);
+    g.fillStyle = '#5f9b3f'; for (let i = -TS; i < TS * 2; i += 100) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i + 50, 0); g.lineTo(i + 50 + TS * .4, TS); g.lineTo(i + TS * .4, TS); g.fill(); }
+    for (let i = 0; i < 30000; i++) { g.fillStyle = r() < 0.5 ? '#4d8433' : '#6aa84a'; g.fillRect(r() * TS | 0, r() * TS | 0, 2, 1); }
+    for (let i = 0; i < 500; i++) { g.fillStyle = r() < .5 ? '#e8e070' : '#f4f4f4'; g.fillRect(r() * TS | 0, r() * TS | 0, 2, 2); }   // kır çiçekleri
+  },
+  runoff: { col: '#cbbd8a', dot: ['#bfae78', '#e0d2a0'], band: null, surf: 'gravel' }
+};
+
 
 function useTrack(key) {
   if (!TRACKS[key]) key = 'istanbul';
@@ -510,6 +559,36 @@ function buildPano() {
     g.fillStyle = '#c9b48a'; g.fillRect(1230, HY - 30, 12, 30); g.fillStyle = '#a8935f'; g.fillRect(1242, HY - 24, 5, 24);
     for (let y = HY - 28; y < HY - 2; y += 4) { g.fillStyle = '#8a7650'; g.fillRect(1233, y, 6, 1); }
     g.fillStyle = '#8a7650'; for (let x = 1229; x < 1243; x += 3) g.fillRect(x, HY - 32, 2, 2);
+  } else if (TK === 'silverstone') {
+    for (let k = 0; k < 16; k++) cloud(r() * PW, 3 + r() * 26, 40 + r() * 60, ['#e9eef2', '#dfe6ec', '#cfd8e0', '#f4f6f8']);
+    for (let x = 0; x < PW; x++) { const a = x / PW * TAU; const h = Math.round(7 + 2 * Math.sin(a * 5) + Math.sin(a * 13));
+      g.fillStyle = '#5e7f52'; g.fillRect(x, HY - h, 1, h + 1); }
+    // "Wing" pit binası: uzun beyaz yapı, kanat biçimli çatı
+    g.fillStyle = '#e6eaee'; g.fillRect(860, HY - 16, 380, 16);
+    g.fillStyle = '#b9c3cc'; for (let x = 864; x < 1236; x += 6) g.fillRect(x, HY - 12, 3, 7);
+    for (let x = 850; x < 1250; x++) { const t = (x - 850) / 400, h = Math.round(4 + 5 * Math.sin(t * Math.PI)); g.fillStyle = '#f4f6f8'; g.fillRect(x, HY - 16 - h, 1, 2); }
+    // tribünler ve çit ağaçları
+    for (const x0 of [140, 1330]) { g.fillStyle = '#c3ccd4'; g.fillRect(x0, HY - 14, 150, 14); g.fillStyle = '#2a4a8a'; g.fillRect(x0, HY - 16, 150, 3);
+      for (let y = HY - 11; y < HY - 2; y += 3) for (let x = x0 + 3; x < x0 + 147; x += 2) { g.fillStyle = ['#d22f2a', '#f4f4f4', '#2a62b8', '#ffd84a'][r() * 4 | 0]; g.fillRect(x, y, 1, 1); } }
+    for (let x = 0; x < PW; x += 3) { if ((x > 560 && x < 720) || (x > 840 && x < 1260)) continue; const h = 5 + (r() * 6 | 0);
+      g.fillStyle = r() < .5 ? '#2f5a2c' : '#3b6b34'; g.fillRect(x, HY - h, 3, h + 1); }
+  } else if (TK === 'podyum') {
+    for (let k = 0; k < 6; k++) cloud(r() * PW, 4 + r() * 16, 24 + r() * 30, ['#ffffff', '#eef4fa']);
+    // Uludağ: geniş, karlı zirve
+    for (let x = 0; x < PW; x++) { const t = (x - 960) / 520, a = x / PW * TAU;
+      const peak = Math.max(0, 1 - t * t) * 46, ridge = 14 + 5 * Math.sin(a * 3 + .5) + 3 * Math.sin(a * 11);
+      const h = Math.round(Math.max(peak + 10 + 3 * Math.sin(x * .05), ridge));
+      g.fillStyle = '#6f86a0'; g.fillRect(x, HY - h, 1, h + 1);
+      const snow = Math.round((h - 32) * .55 + 2.5 * Math.sin(x * .37) + 1.5 * Math.sin(x * .13)); if (snow > 0) { g.fillStyle = '#f2f6fa'; g.fillRect(x, HY - h, 1, snow); g.fillStyle = '#c9d4e0'; g.fillRect(x, HY - h + snow, 1, 1); } }
+    g.fillStyle = 'rgba(199,214,222,.45)'; g.fillRect(0, HY - 16, PW, 16);
+    // Bursa şehri
+    for (let x = 760; x < 1420;) { const w = 5 + (r() * 8 | 0), h = 5 + (r() * 11 | 0);
+      g.fillStyle = ['#e8dcc8', '#d9c7a3', '#f1ece2', '#c9b89a'][r() * 4 | 0]; g.fillRect(x, HY - h, w, h + 1);
+      g.fillStyle = '#b55a3a'; g.fillRect(x, HY - h, w, 1); x += w + (r() * 3 | 0); }
+    // Yeşil Türbe kubbesi
+    g.fillStyle = '#2f8a5a'; g.beginPath(); g.arc(1180, HY - 13, 6, Math.PI, TAU); g.fill(); g.fillRect(1174, HY - 13, 12, 13);
+    for (let x = 0; x < PW; x += 5 + (r() * 6 | 0)) { if ((x > 560 && x < 720) || (x > 750 && x < 1430)) continue; const h = 8 + r() * 10 | 0;
+      g.fillStyle = '#3f6a2e'; g.fillRect(x, HY - h, 2, h); g.fillRect(x - 1, HY - h + 2, 4, h - 4); }
   } else {   // İstanbul
     for (let k = 0; k < 6; k++) cloud(r() * PW, 8 + r() * 20, 20 + r() * 40, ['#fbe9cf', '#f4dcbc']);
     for (let x = 0; x < PW; x++) { const a = x / PW * TAU; const h = Math.round(13 + 5 * Math.sin(a * 3) + 3 * Math.sin(a * 7 + 1));
@@ -530,7 +609,7 @@ function buildPano() {
       g.fillStyle = '#4c6a3a'; g.fillRect(x, HY - h, 2, h); g.fillRect(x - 1, HY - h + 2, 4, h - 4); }
   }
   g.imageSmoothingEnabled = true; g.drawImage(workshop, 640 - 72, HY - 72, 144, 75); g.imageSmoothingEnabled = false;
-  if (!TH.walls && TK !== 'monza') for (let x = 0; x < PW; x += 5 + (r() * 6 | 0)) { if (x > 560 && x < 720) continue; if (TK === 'istanbul' && x > 860 && x < 1400) continue;
+  if (!TH.walls && TK !== 'monza' && TK !== 'silverstone' && TK !== 'podyum') for (let x = 0; x < PW; x += 5 + (r() * 6 | 0)) { if (x > 560 && x < 720) continue; if (TK === 'istanbul' && x > 860 && x < 1400) continue;
     const h = 6 + r() * (TK === 'spa' ? 16 : 10) | 0, w = Math.ceil(h * 0.3);
     for (let y = 0; y < h; y++) { const ww = Math.round(y / h * w); g.fillStyle = TK === 'spa' ? '#173f27' : '#3d5a2e'; g.fillRect(x - ww, HY - h + y + 1, ww * 2 + 1, 1); } }
   pano = c;
@@ -552,12 +631,14 @@ function buildObjects() {
     }
     for (let i = 0; i < (TK === 'baku' ? 14 : 40); i++) addObj({ x: 60 + r() * (TS - 120), y: TH.seaY + 58 + r() * (TS - TH.seaY - 90), img: imgYacht, ww: 26 + r() * 10, r: 0 });
   } else {
-    const n = TK === 'spa' ? 420 : TK === 'monza' ? 360 : 170;
+    const n = TK === 'spa' ? 420 : TK === 'monza' ? 360 : TK === 'podyum' ? 260 : TK === 'silverstone' ? 120 : 170;
     for (let t = 0; t < 2400 && objs.length < n; t++) {
       const x = 60 + r() * (TS - 120), y = 60 + r() * (TS - 120);
       if (!awayFromBuildings(x, y) || !farFromTrack(x, y, 26)) continue;
       const k = r();
       if (TK === 'spa') addObj(k < 0.6 ? { x, y, img: imgDarkPine, ww: 26, r: 4 } : k < 0.9 ? { x, y, img: imgPine, ww: 24, r: 4 } : { x, y, img: imgPine2, ww: 20, r: 4 });
+      else if (TK === 'silverstone') addObj(k < 0.5 ? { x, y, img: imgAutumn, ww: 26, r: 4 } : { x, y, img: imgPine2, ww: 22, r: 4 });
+      else if (TK === 'podyum') addObj(k < 0.5 ? { x, y, img: imgPoplar, ww: 16, r: 3 } : k < 0.8 ? { x, y, img: imgCypress, ww: 12, r: 3 } : { x, y, img: imgPine, ww: 22, r: 4 });
       else if (TK === 'monza') addObj(k < 0.4 ? { x, y, img: imgPine2, ww: 22, r: 4 } : k < 0.75 ? { x, y, img: imgPoplar, ww: 16, r: 3 } : { x, y, img: imgAutumn, ww: 26, r: 4 });
       else addObj(k < 0.45 ? { x, y, img: imgCypress, ww: 12, r: 3 } : k < 0.8 ? { x, y, img: imgPoplar, ww: 14, r: 3 } : { x, y, img: imgAutumn, ww: 24, r: 4 });
     }
@@ -625,13 +706,14 @@ function buildCars() {
 const SURF = { road: { top: 1, drag: 0.15, grip: 1 }, curb: { top: 0.96, drag: 0.22, grip: 0.92 }, grass: { top: 0.55, drag: 1.0, grip: 0.68 },
   gravel: { top: 0.38, drag: 2.2, grip: 0.5 }, runoff: { top: 0.9, drag: 0.32, grip: 0.9 }, wall: { top: 0.9, drag: 0.4, grip: 0.9 } };
 const SURFS = ['road', 'curb', 'grass', 'gravel', 'runoff', 'wall'];
+const TB_DEF = [1.35, 1.8];
 const statsOf = s => ({ top: 230 + 90 * s.top, acc: 110 + 130 * s.acc, turn: 2.1 + 1.3 * s.turn, grip: 4.5 + 7 * s.grip });
 function makeCar(def, slot, kind) {
   const gp = gridPos(slot);
   return { def, kind, stats: statsOf(def.s), x: gp.x, y: gp.y, a: gp.a, vx: 0, vy: 0, av: 0, idx: gp.i, lap: -1, maxLap: -1, lapStart: 0, laps: [], bestLap: 0,
     finished: false, fin: 0, total: 0, turbo: 25, turboOn: false, lane: (Math.random() - 0.5) * 0.4, laneT: 1 + Math.random() * 2, surf: 'road', slip: 0,
     skill: 0.96 + Math.random() * 0.05, hitT: 0, buf: [], vf: 0, f: gp.i / NS, name: def.name, id: 0, seen: 0,
-    item: null, itemT: 0, boostT: 0, shieldT: 0, spinT: 0, spinDir: 1, zapT: 0, flags: 0 };
+    item: null, itemT: 0, boostT: 0, shieldT: 0, spinT: 0, spinDir: 1, zapT: 0, flags: 0, mm: 1, mmT: 1, mT: 2 + Math.random() * 3, mTier: null };
 }
 const speedF = c => c.kind === 'remote' ? c.vf : c.vx * Math.cos(c.a) + c.vy * Math.sin(c.a);
 function stepCar(c, inp, dt) {
@@ -639,7 +721,9 @@ function stepCar(c, inp, dt) {
   let vf = c.vx * fx + c.vy * fy, vl = c.vx * rxv + c.vy * ryv;
   const sf = SURF[c.surf] || SURF.road;
   let top = st.top * sf.top, acc = st.acc;
-  if (c.turboOn) { top *= 1.35; acc *= 1.8; }
+  const tb = c.def.tb || TB_DEF;
+  if (c.turboOn) { top *= tb[0]; acc *= tb[1]; }
+  if (c.def.myst) { top *= c.mm; acc *= c.mm; }
   if (c.zapT > 0) { top *= 0.55; acc *= 0.6; }
   if (inp.thr > 0.05) { if (vf < top) vf += acc * inp.thr * dt * (1 - Math.max(0, vf) / top * 0.6); }
   else if (inp.thr < -0.05) { if (vf > 8) vf -= 280 * -inp.thr * dt; else vf = Math.max(-70, vf - 100 * -inp.thr * dt); }
@@ -699,8 +783,11 @@ function aiDrive(c, dt, ref) {
   let km = 0; for (let k = 4; k < 44; k += 3) km = Math.max(km, Math.abs(KV[(c.idx + k) % NS]));
   let skill = 0.86;
   if (c.kind === 'ai' && ref) { const gap = progOf(ref) - progOf(c); skill = clamp(0.94 + gap * 0.3, 0.84, 1.07) * c.skill; }
-  const target = c.stats.top * clamp(1.15 - km * 52, 0.42, 1) * skill;
-  return { steer: clamp(diff * 3, -1, 1), thr: vf < target ? 1 : vf > target * 1.08 ? -0.6 : 0.15, turbo: c.turbo > 50 && km < 0.003 && vf > target * 0.8 };
+  const cf = clamp(1.15 - km * 52, 0.42, 1);
+  // düzlükte aracın o anki gerçek azami hızına (turbo, gizemli güç) kadar çıkar; virajda tabana göre yavaşlar
+  const effTop = c.stats.top * (c.turboOn ? (c.def.tb || TB_DEF)[0] : 1) * (c.def.myst ? c.mm : 1);
+  const target = (cf >= 1 ? Math.max(c.stats.top, effTop) : c.stats.top * cf) * skill;
+  return { steer: clamp(diff * 3, -1, 1), thr: vf < target ? 1 : vf > target * 1.08 ? -0.6 : 0.15, turbo: c.def.regen ? (c.turbo > 8 && km < 0.007) : (c.turbo > 50 && km < 0.003 && vf > target * 0.8) };
 }
 function collide(list) {
   if (race.collide) for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) {
@@ -902,7 +989,7 @@ function updRemote(c, now) {
   c.vf = s1.v; c.flags = s1.fl; c.turboOn = !!(s1.fl & 1); c.f = s1.f; c.surf = SURFS[s1.s | 0] || 'road'; c.lap = s1.lap;
   c.idx = clamp(Math.round(c.f * NS), 0, NS - 1);
 }
-const flagsOf = c => (c.turboOn ? 1 : 0) | (c.shieldT > 0 ? 2 : 0) | (c.spinT > 0 ? 4 : 0) | (c.zapT > 0 ? 8 : 0);
+const flagsOf = c => (c.turboOn ? 1 : 0) | (c.shieldT > 0 ? 2 : 0) | (c.spinT > 0 ? 4 : 0) | (c.zapT > 0 ? 8 : 0) | (c.mm > 1.08 ? 16 : 0) | (c.mm < .92 ? 32 : 0);
 
 /* ---------------- ana güncelleme ---------------- */
 function update(dt) {
@@ -926,9 +1013,11 @@ function update(dt) {
     let inp = { steer: 0, thr: 0, turbo: false };
     if (racing) inp = (c.kind === 'ai' || c.finished || BOT) ? aiDrive(c, dt, me) : readInput();
     for (const k of ['boostT', 'shieldT', 'spinT', 'zapT']) if (c[k] > 0) c[k] = Math.max(0, c[k] - dt);
+    if (c.def.myst) { if (state === 'race' && !c.finished) { c.mT -= dt; if (c.mT <= 0) rollMyst(c); } c.mm += (c.mmT - c.mm) * Math.min(1, dt * 2.5); }
     if (c.spinT > 0) inp = { steer: 0, thr: 0, turbo: false };
     c.turboOn = c.boostT > 0 || (!!inp.turbo && c.turbo > 0 && speedF(c) > 20);
     if (c.turboOn && c.boostT <= 0) { c.turbo = Math.max(0, c.turbo - 30 * dt); }
+    else if (c.def.regen && state === 'race') c.turbo = Math.min(100, c.turbo + c.def.regen * dt);   // scooter bataryası kendini doldurur
     if (c === me && c.turboOn && !me.wasTurbo) sfx('turbo');
     if (c === me) me.wasTurbo = c.turboOn;
     if (racing && c.item && (c.kind === 'ai' || BOT)) { c.itemT -= dt; if (c.itemT <= 0 && state === 'race') useItem(c); }
@@ -947,6 +1036,9 @@ function update(dt) {
   for (const c of cars) {
     const tb = c.kind === 'remote' ? !!(c.flags & 1) : c.turboOn;
     if (tb && Math.random() < 0.5) particles.push({ x: c.x - Math.cos(c.a) * 9, y: c.y - Math.sin(c.a) * 9, life: 0.3, max: 0.3, col: '#ffb03b' });
+    const fl = c.kind === 'remote' ? c.flags : flagsOf(c);
+    if ((fl & 16) && Math.random() < 0.6) particles.push({ x: c.x - Math.cos(c.a) * 8 + (Math.random() - .5) * 6, y: c.y - Math.sin(c.a) * 8 + (Math.random() - .5) * 6, life: 0.4, max: 0.4, col: Math.random() < .5 ? '#c792ea' : '#ffffff' });
+    if ((fl & 32) && Math.random() < 0.35) particles.push({ x: c.x - Math.cos(c.a) * 8, y: c.y - Math.sin(c.a) * 8, life: 0.6, max: 0.6, col: '#7d858c' });
     const zp = c.kind === 'remote' ? !!(c.flags & 8) : c.zapT > 0;
     if (zp && Math.random() < 0.5) particles.push({ x: c.x + (Math.random() - .5) * 8, y: c.y + (Math.random() - .5) * 8, life: 0.25, max: 0.25, col: '#ffd84a' });
   }
@@ -993,7 +1085,7 @@ function updateAttract(dt, now) {
   followCam(demo, dt);
 }
 function practiceResults() {
-  return standings().map(c => ({ name: c === me ? (playerName() || 'SEN') : c.def.name, car: c.def.key, finished: c.finished, total: c.total, best: c.bestLap, me: c === me }));
+  return standings().map(c => ({ name: c === me ? (playerName() || 'SEN') : cname(c.def), car: c.def.key, finished: c.finished, total: c.total, best: c.bestLap, me: c === me }));
 }
 
 /* =========================================================
@@ -1110,7 +1202,7 @@ function drawItem(it, now, viewer) {
       const fl = o.kind === 'remote' ? o.flags : flagsOf(o);
       if (fl & 1) for (let i = 0; i < 3; i++) { ctx.fillStyle = i % 2 ? '#ffd84a' : '#ff7a1a'; ctx.fillRect(Math.round(p.sx - 2 + Math.random() * 4), Math.round(p.gy - 3 - Math.random() * 3), 2, 2); }
       if (fl & 2) shieldRing(p.sx, p.gy - 4 * p.k, 10 * p.k);
-      if (p.depth < 240) { const tag = o.kind === 'ai' ? o.def.name : o.name; txt(tag, p.sx, p.gy - 22 * p.k * VW - 12, o.def.col, 8, 'center'); }
+      if (p.depth < 240) { const tag = o.kind === 'ai' ? cname(o.def) : o.name; txt(tag, p.sx, p.gy - 22 * p.k * VW - 12, o.def.col, 8, 'center'); }
     } else {
       const s = p.k * VW, phi = wrapA(o.a - camA);
       const bounce = (o.surf === 'grass' || o.surf === 'gravel') && Math.abs(speedF(o)) > 30 ? Math.round(Math.random() * 2) : 0;
@@ -1159,11 +1251,12 @@ function hud() {
   if (!mob) txt('TURBO', tbx, tby, '#9ecbef');
   txt('H2', tbx, tby + 12 - (mob ? 1 : 0), '#3fd0f0'); ctx.fillStyle = '#000'; ctx.fillRect(tbx + 22, tby + 11, 72, 10); ctx.fillStyle = '#20313f'; ctx.fillRect(tbx + 23, tby + 12, 70, 8);
   ctx.fillStyle = me.turboOn ? (Math.floor(gT * 10) % 2 ? '#ffd84a' : '#ff7a1a') : '#3fd0f0'; ctx.fillRect(tbx + 23, tby + 12, Math.round(me.turbo * 0.7), 8);
+  if (me.def.myst) { const t = me.mTier || MYST[2]; txt('GÜÇ x' + me.mm.toFixed(2), tbx + 98, tby + 12, t[2], 8); }
   const mx = W - MM - 4, my = mob ? 48 : H - MM - 4; ctx.drawImage(minimap, mx, my);
   for (const c of cars) { const x = mx + (c.x - mmScale.x0) * mmScale.s, y = my + (c.y - mmScale.y0) * mmScale.s, s = c === me ? 3 : 2;
     ctx.fillStyle = '#000'; ctx.fillRect(Math.round(x) - s, Math.round(y) - s, s + 2, s + 2); ctx.fillStyle = c.def.col; ctx.fillRect(Math.round(x) - s + 1, Math.round(y) - s + 1, s, s); }
   st.forEach((c, i) => { const y = 50 + i * 10; ctx.fillStyle = c.def.col; ctx.fillRect(6, y + 1, 4, 6);
-    const nm = (c.kind === 'ai' ? c.def.name : c.name).toLocaleUpperCase('tr').slice(0, 10);
+    const nm = (c.kind === 'ai' ? cname(c.def) : c.name).toLocaleUpperCase('tr').slice(0, 10);
     txt((i + 1) + ' ' + nm, 13, y, c === me ? '#ffd84a' : c.finished ? '#5fd16b' : '#e6eef5', 8); });
   feed.forEach((f, i) => { ctx.globalAlpha = Math.min(1, f.life); if (mob) txt(f.t, W / 2, 84 + i * 10, f.col, 8, 'center'); else txt(f.t, W - 6, 52 + i * 10, f.col, 8, 'right'); ctx.globalAlpha = 1; });
   const dot = Math.cos(me.a) * TX[me.idx] + Math.sin(me.a) * TY[me.idx];
@@ -1497,7 +1590,7 @@ addEventListener('keydown', e => {
     if ((k === ' ' || k === 'shift') && turboLatch && state === 'race') latched = !latched;
     if (k === 'm') nextSong();
     if ((state === 'menu' || state === 'room') && (k === 'arrowleft' || k === 'arrowright')) {
-      const i = CARS.findIndex(c => c.key === selCar); chooseCar(CARS[(i + (k === 'arrowright' ? 1 : 3)) % 4].key);
+      const i = CARS.findIndex(c => c.key === selCar); chooseCar(CARS[(i + (k === 'arrowright' ? 1 : CARS.length - 1)) % CARS.length].key);
     }
   }
   keys[k] = true;
@@ -1543,7 +1636,7 @@ function readInput() {
 let navLatch = false;
 function joyMenuNav() {
   if (!joy.ok || (state !== 'menu' && state !== 'room')) { navLatch = false; return; }
-  if (!navLatch && Math.abs(joy.x) > 0.6) { const i = CARS.findIndex(c => c.key === selCar); chooseCar(CARS[(i + (joy.x > 0 ? 1 : 3)) % 4].key); navLatch = true; }
+  if (!navLatch && Math.abs(joy.x) > 0.6) { const i = CARS.findIndex(c => c.key === selCar); chooseCar(CARS[(i + (joy.x > 0 ? 1 : CARS.length - 1)) % CARS.length].key); navLatch = true; }
   if (Math.abs(joy.x) < 0.3) navLatch = false;
 }
 
@@ -1809,6 +1902,23 @@ async function init() {
 }
 window.__hgp = { get state() { return state; }, get room() { return room; }, get me() { return me; }, get cars() { return cars; }, get board() { return board; },
   get myId() { return myId; }, get race() { return race; }, get NS() { return NS; }, get tex() { return tc; }, send, chooseCar, useTrack, useItem, startPractice,
-  setPcfg(c) { pcfg = Object.assign({}, pcfg, c); }, get haz() { return haz; }, get obst() { return obst; }, get boxes() { return boxes; }, get pano() { return pano; } };
+  setPcfg(c) { pcfg = Object.assign({}, pcfg, c); },
+  // denge testi: tek aracı yapay zekâ sürüşüyle hızlandırılmış simüle et, tur sürelerini döndür
+  simRace(key, tk, laps, eager) {
+    const keep = { state, race, raceT, cars, me }; useTrack(tk);
+    race = Object.assign({}, CFG_DEF, { items: 0, obst: 0, collide: 0, laps, track: tk, seed: 1 }); placeRaceItems(race, 1);
+    const c = makeCar(CARK[key], 0, 'ai'); cars = [c]; me = null; state = 'race'; raceT = 0; c.lapStart = 0;
+    const dt = 1 / 60;
+    for (let n = 0; n < 60 * 400 && c.laps.length < laps; n++) {
+      raceT += dt; const inp = aiDrive(c, dt, null); if (eager) inp.turbo = c.turbo > 0;   // insan gibi: turbo varsa bas
+      for (const k of ['boostT', 'shieldT', 'spinT', 'zapT']) if (c[k] > 0) c[k] = Math.max(0, c[k] - dt);
+      if (c.def.myst) { c.mT -= dt; if (c.mT <= 0) rollMyst(c); c.mm += (c.mmT - c.mm) * Math.min(1, dt * 2.5); }
+      c.turboOn = c.boostT > 0 || (!!inp.turbo && c.turbo > 0 && speedF(c) > 20);
+      if (c.turboOn && c.boostT <= 0) c.turbo = Math.max(0, c.turbo - 30 * dt); else if (c.def.regen) c.turbo = Math.min(100, c.turbo + c.def.regen * dt);
+      stepCar(c, inp, dt); trackUpdate(c, true); interact(c, raceT * 1000); collide([c]);
+    }
+    const out = c.laps.map(x => +x.toFixed(2)); Object.assign({}, keep); state = keep.state; race = keep.race; raceT = keep.raceT; cars = keep.cars; me = keep.me;
+    return out;
+  }, get haz() { return haz; }, get obst() { return obst; }, get boxes() { return boxes; }, get pano() { return pano; } };
 init();
 })();

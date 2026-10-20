@@ -149,8 +149,92 @@ const SPEC = {
     },
     wheels: [{ u: .78, r: 3.7, spokes: 6, hub: 0xd7dce0 }, { u: .14, r: 2.8, center: true, skirt: true }],
     extras(put) { for (let x = .4; x < .07 * 48; x += .6) { const hw = this.hw(x / 48) * 9 - .4; for (let y = 9 - hw; y < 9 + hw; y += .6) put(x, y, 6.8 + (1 - x / 3.4) * 1.4, 0xd2d8de); } }   // rüzgârlık
+  },
+  /* HİDROKET-1 (3): gümüş gövde, önde turuncu alevler, turuncu burun ve çamurluklar, uzun füme kabin,
+     kuyrukta yukarı kalkık rüzgârlık, yanda büyük siyah 3, kuyrukta TOSFED dama bayrağı, turuncu aynalar. */
+  hk1: {
+    W: 18, H: 17, clear: 1.6,
+    hw: u => kp([[0, .58], [.08, .76], [.35, .92], [.65, 1], [.86, .96], [1, .72]], u),
+    belt: u => kp([[0, 11.6], [.1, 12], [.35, 10.8], [.6, 9.4], [.78, 8], [.9, 6.4], [1, 4.4]], u),
+    top: u => kp([[0, 13], [.05, 15.4], [.12, 14.6], [.35, 13.4], [.5, 13], [.62, 12.4], [.76, 10.4], [.88, 7.4], [1, 4.4]], u),
+    cw: .7, nLow: 3.2, nUp: 2,
+    paint(u, v, z, c) {
+      const av = Math.abs(v), SV = 0xbcc2c9, OR = 0xf2761c;
+      if (c.upper && u > .4 && u < .8) return (c.isTop && Math.abs(u - .66) < .015) ? 0x8ea6b4 : (u > .72 && u < .755 && z > c.top - 1 && v < -.25) ? 0xd1202b : 0x15191e;   // füme kabin + bayrak
+      if (c.isTop && u > .4 && u < .8 && av < .5) return 0x15191e;
+      if (u > .965 && z >= 3.6 && z <= 5 && av > .3 && av < .8) return 0xfff2c8;
+      if ((c.side || !c.isTop) && u > .12 && u < .25 && z >= 6.5 && z <= 12.5) return digit3(u, z, v) ? 0x16181c : SV;                                         // büyük 3
+      if ((c.side || !c.isTop) && u > .025 && u < .09 && z >= 5.5 && z <= 9.5) return z > 8.6 ? 0xd1202b : ((Math.floor(u * 48 * 1.5) + Math.floor(z * 1.5)) % 2 ? 0x111111 : 0xf4f4f4);  // TOSFED
+      if (c.isTop && u > .82 && u < .9 && av < .25) { const d = Math.hypot((u - .86) * 48, v * 9); if (d < 1.7) return d < 1.1 ? 0x3a3020 : 0xe8e2d0; }      // mühür
+      // alevler: önden geriye uzanan dilimler
+      const tongue = .58 - .2 * Math.pow(Math.max(0, Math.sin(z * 1.25 + (c.isTop ? v * 4 : 0))), .7);
+      if (u > .8) return OR;
+      if (u > tongue) return (u < tongue + .025) ? 0xf7a24a : OR;
+      if (!c.isTop && u > .28 && u < .55 && z > 3 && z < 8 && ((Math.round(u * 140) + Math.round(z * 3)) % 7 === 0)) return 0xf4f6f8;      // sponsor etiketleri
+      return z < 2.8 ? 0x8b9198 : SV;
+    },
+    wheels: [{ u: .78, r: 3.7, spokes: 6, hub: 0xd7dce0 }, { u: .1, r: 2.6, center: true, skirt: true }],
+    extras(put) {
+      for (let x = 0; x < .07 * 48; x += .6) { const hw = this.hw(x / 48) * 9 + .4; for (let y = 9 - hw; y < 9 + hw; y += .6) put(x, y, 14 + (1 - x / 3.4) * 2.2, 0xc9cfd5); }   // kalkık rüzgârlık
+      for (const y of [-1, 19]) { for (let z = 0; z < 2.4; z += .6) put(.71 * 48, y, 11 + z, 0x9aa0a6); put(.71 * 48, y, 13.4, 0xf2761c); put(.71 * 48 + .7, y, 13.4, 0xf2761c); }  // aynalar
+    }
+  },
+  /* HALİS'İN SCOOTERI: siyah elektrikli scooter (mavi ışıklı gövde, çift far, arka çanta) ve üstünde Halis:
+     siyah tişört, koyu kıvırcık saç, koyu pantolon, bilekte gümüş bilezik. */
+  halis: {
+    W: 14, H: 29, clear: 0, custom: true,
+    wheels: [{ u: .2, r: 4, center: true, thick: true }, { u: .8, r: 4, center: true, thick: true }],
+    extras(put) {
+      const box = (x0, x1, y0, y1, z0, z1, c) => { for (let x = x0; x < x1; x += .6) for (let y = y0; y < y1; y += .6) for (let z = z0; z < z1; z += .6) put(x, y, z, typeof c === 'function' ? c(x, y, z) : c); };
+      const line = (a, b, r, c) => { const n = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]) / .4); for (let i = 0; i <= n; i++) { const t = i / n; box(a[0] + (b[0] - a[0]) * t - r, a[0] + (b[0] - a[0]) * t + r, a[1] + (b[1] - a[1]) * t - r, a[1] + (b[1] - a[1]) * t + r, a[2] + (b[2] - a[2]) * t - r, a[2] + (b[2] - a[2]) * t + r, c); } };
+      const BK = 0x16171a, BL = 0x2f4fd8;
+      // gövde (ayaklık) + mavi ışıklar
+      box(11, 37, 4.4, 9.6, 3.6, 5.4, (x, y, z) => z > 4.8 && (Math.abs(y - 5.8) < .5 || Math.abs(y - 8.2) < .5) && x > 14 && x < 34 && (x | 0) % 3 ? BL : BK);
+      box(8, 14, 5.2, 8.8, 3, 5, 0x9aa0a6);                                   // arka salıncak
+      line([6, 7, 9.6], [14, 7, 4.8], .5, BK);                              // arka çamurluk desteği
+      for (let a = 0; a < Math.PI; a += .12) put(9.6 - Math.cos(a) * 5, 7, 4 + Math.sin(a) * 5, BK);   // çamurluk
+      // arka çanta
+      box(2.6, 12.4, 2.2, 11.8, 9.6, 16.4, (x, y, z) => z > 15.6 ? 0x23252a : (Math.abs(z - 13.6) < .3 ? 0x0e0f11 : BK));
+      line([8, 3, 9.6], [12, 3, 5], .4, BK); line([8, 11, 9.6], [12, 11, 5], .4, BK);
+      // ön maşa ve direk (mavi ara parça)
+      line([37, 7, 5], [40.2, 7, 24], .9, (x, y, z) => (z > 9 && z < 21 && x < 38.4 + (z - 5) * .17 && Math.abs(y - 7) < .5) ? BL : BK);
+      line([38.4, 5.4, 4], [39.4, 5.4, 10], .5, 0xa8aeb4); line([38.4, 8.6, 4], [39.4, 8.6, 10], .5, 0xa8aeb4);
+      // çift far
+      box(40.4, 41.6, 4.4, 6.2, 9.4, 11.2, 0xfffbe0); box(40.4, 41.6, 7.8, 9.6, 9.4, 11.2, 0xfffbe0);
+      box(39.6, 40.4, 4.2, 9.8, 9.2, 11.4, BK);
+      // gidon
+      box(39.4, 41, 0, 14, 23.4, 24.6, BK); box(39.4, 41.2, -.6, 1.4, 23.2, 24.8, 0x2a2c30); box(39.4, 41.2, 12.6, 14.6, 23.2, 24.8, 0x2a2c30);
+      box(40.2, 41.6, 6, 8, 24.4, 25.4, 0x30343a);                            // ekran
+      /* Halis */
+      const SK = 0xc8875e, SKd = 0xa86d4a, TS = 0x17181b, PN = 0x2f3644, HR = 0x1d1511, HR2 = 0x2c2019;
+      box(20.6, 24.4, 5, 6.8, 5.4, 6.8, 0x26272b); box(27.4, 31.2, 7.2, 9, 5.4, 6.8, 0x26272b);            // ayakkabılar
+      line([23, 5.9, 6.8], [25.6, 5.9, 15.6], .95, PN); line([29.4, 8.1, 6.8], [27.2, 8.1, 15.6], .95, PN);   // bacaklar
+      box(24.4, 29.6, 4.2, 9.8, 15.2, 17, PN);                                                              // kalça
+      for (let z = 16.6; z < 24; z += .6) { const lean = (z - 16.6) * .14; box(24.6 + lean, 29.6 + lean, 4 + (z > 21 ? .2 : 0), 10 - (z > 21 ? .2 : 0), z, z + .6, TS); }   // gövde: siyah tişört
+      line([29.6, 3.4, 22.6], [33.6, 2.6, 21.6], .9, TS); line([29.6, 10.6, 22.6], [33.6, 11.4, 21.6], .9, TS);   // kollar (kısa kol)
+      line([33.6, 2.6, 21.6], [40, .8, 24], .75, SK); line([33.6, 11.4, 21.6], [40, 13.2, 24], .75, SK);           // ön kollar gidona
+      box(37.6, 38.8, 12, 14, 22.8, 24.2, 0xd4d8dc);                                                         // gümüş bilezik
+      box(27.6, 30, 5.8, 8.2, 23.8, 25, SK);                                                                // boyun
+      box(26.6, 31.4, 4.8, 9.2, 24.8, 30, (x, y, z) => {                                                    // baş
+        if (x > 30.8) { if (Math.abs(z - 28.2) < .4 && (Math.abs(y - 6) < .5 || Math.abs(y - 8) < .5)) return 0x241a14;   // gözler
+                        if (Math.abs(z - 29.1) < .3 && (Math.abs(y - 6) < .8 || Math.abs(y - 8) < .8)) return HR;          // kaşlar
+                        if (Math.abs(z - 26.4) < .35 && Math.abs(y - 7) < 1.1) return 0x8a4a36;                             // gülümseme
+                        if (Math.abs(y - 7) < .5 && z > 26.8 && z < 28) return SKd; }                                       // burun
+        if (x < 27.8 && z > 26.4) return ((x * 3 | 0) + (z * 3 | 0) + (y * 3 | 0)) % 2 ? HR : HR2;                         // ense saç
+        return SK; });
+      box(26.2, 31.6, 4.4, 9.6, 29.6, 31.8, (x, y, z) => ((x * 2.5 | 0) + (y * 2.5 | 0) + (z * 2.5 | 0)) % 2 ? HR : HR2);  // kıvırcık saç
+      box(30.4, 32, 4.8, 9.2, 29.2, 30.2, HR);                                                                          // perçem
+      box(26.4, 30.6, 4.2, 4.8, 26.8, 30, HR); box(26.4, 30.6, 9.2, 9.8, 26.8, 30, HR);                                 // yan saçlar
+    }
   }
 };
+function digit3(u, z, v) {   // kuyruktaki büyük "3"
+  const gx = (u - .12) / .13 * 4, gz = (12.5 - z) / 6 * 5;   // 4x5 ızgara
+  const r = Math.floor(gz), cx = Math.floor(gx);
+  if (r < 0 || r > 4 || cx < 0 || cx > 3) return false;
+  const rows = ['1111', '0001', '0111', '0001', '1111'];
+  return rows[r][v < 0 ? cx : 3 - cx] === '1';     // iki yanda da düz okunsun
+}
 
 const RES = 1.34;               // her tarif biriminde kaç voxel (daha ince ayrıntı)
 function buildModel(key) {
@@ -159,7 +243,7 @@ function buildModel(key) {
   const K = (x, y, z) => (z * 96 + (y + 4)) * 96 + x;
   const putV = (x, y, z, c) => { if (x < 0 || x >= LV || z < 0 || z >= HV + 4) return; occ.set(K(x, y, z), { x, y, z, c }); };
   const put = (x, y, z, c) => putV(Math.floor(x * RES), y < 0 ? Math.floor(y) : y >= sp.W ? WV + Math.floor(y - sp.W) : Math.floor(y * RES), Math.floor(z * RES), c);
-  for (let x = 0; x < LV; x++) {
+  if (!sp.custom) for (let x = 0; x < LV; x++) {
     const u = (x + .5) / LV, hw = Math.max(.12, sp.hw(u)) * sp.W / 2, belt = sp.belt(u), top = Math.max(belt, sp.top(u));
     for (let y = 0; y < WV; y++) {
       const vy = (y + .5) / RES - sp.W / 2, v = vy / (sp.W / 2), t = Math.abs(vy) / hw;
@@ -178,10 +262,10 @@ function buildModel(key) {
   // tekerlekler
   for (const wh of sp.wheels) {
     const xc = wh.u * LV - .5, r = wh.r * RES, zc = r - .2;
-    const mid = Math.floor(WV / 2), ys = wh.center ? [mid - 1, mid] : [-2, -1, 0, WV - 1, WV, WV + 1];
+    const mid = Math.floor(WV / 2), ys = wh.thick ? [mid - 2, mid - 1, mid, mid + 1] : wh.center ? [mid - 1, mid] : [-2, -1, 0, WV - 1, WV, WV + 1];
     for (const y of ys) for (let x = Math.floor(xc - r - 1); x <= xc + r + 1; x++) for (let z = 0; z <= zc + r + 1; z++) {
       const d2 = sq(x - xc) + sq(z - zc); if (d2 > r * r + .4) continue;
-      const outer = wh.center || y === -2 || y === WV + 1;
+      const outer = (wh.thick ? (y === mid - 2 || y === mid + 1) : wh.center) || y === -2 || y === WV + 1;
       let col = 0x17181a;
       if (outer) {
         const rr = Math.sqrt(d2), dx = (x - xc) / r, dz = (z - zc) / r;
