@@ -122,6 +122,26 @@ dl.keys dt{color:var(--blue);font-weight:600} dl.keys dd{margin:0;color:var(--si
 .seg button[aria-pressed="true"]{background:#13304d;color:var(--gold)}
 
 .tabs{display:flex;gap:6px;flex-wrap:wrap}
+.modes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+@media (max-width:700px){.modes{grid-template-columns:1fr}}
+.mode{display:flex;flex-direction:column;gap:8px;align-items:flex-start;text-align:left;background:#0b2238;border:2px solid var(--line);color:var(--ink);padding:14px;cursor:pointer;font-family:var(--f-body);box-shadow:0 4px 0 #06121f}
+.mode b{font-family:var(--f-pix);font-size:11px;font-weight:400;letter-spacing:.05em;color:#5fd16b}
+.mode.comp b{color:#ffd84a} .mode.free b{color:#3fd0f0}
+.mode span{font-size:12px;color:var(--dim);line-height:1.45}
+.mode:hover,.mode:focus-visible{border-color:var(--gold);outline:none}
+.mbadge{font-size:8px;padding:3px 6px;margin-left:6px;border:1px solid currentColor;vertical-align:2px}
+.mbadge.comp{color:#ffd84a} .mbadge.free{color:#3fd0f0}
+.rules{display:flex;flex-wrap:wrap;gap:6px}
+.rules span{font-family:var(--f-pix);font-size:8px;color:var(--dim);border:1px solid var(--line);padding:7px 8px;background:#0b2238}
+.rules b{color:var(--ink);font-weight:400}
+.pickTrack{font-family:var(--f-pix);font-size:12px;color:var(--gold);margin-top:6px}
+.pickTime{font-family:var(--f-pix);font-size:28px;color:var(--ink);min-width:2.2em;text-align:right}
+.cars.four{grid-template-columns:repeat(4,minmax(0,1fr))}
+.plist .ok{color:#5fd16b} .plist .wait{color:var(--dim)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-family:var(--f-pix);font-size:8px;padding:8px 9px;background:transparent;color:var(--dim);border:1px solid var(--line);cursor:pointer}
+.chip[aria-pressed="true"]{background:#13304d;color:var(--gold);border-color:var(--gold)}
+.chip:disabled{cursor:default;opacity:.75}
 .songs{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
 .song{display:flex;flex-direction:column;align-items:flex-start;gap:6px;text-align:left;background:#0b2238;border:2px solid var(--line);color:var(--ink);padding:12px;cursor:pointer;font-family:var(--f-body)}
 .song b{font-family:var(--f-pix);font-size:9px;font-weight:400;letter-spacing:.04em;line-height:1.5}
@@ -214,36 +234,43 @@ pre{margin:0;background:#061526;border:1px solid var(--line);padding:14px;overfl
     </div>
 
     <div class="overlay" id="overlay">
-      <!-- giriş -->
+      <!-- giriş: mod seçimi -->
       <section class="card" id="scrEntry">
         <div class="brand" id="brandPill" aria-label="hidroket"><img id="brandEm" alt=""><img id="brandWord" class="word" alt="hidroket"><b>GP</b></div>
         <div class="field">
           <label for="name">PİLOT ADI</label>
           <input type="text" id="name" maxlength="14" autocomplete="nickname" placeholder="örn. Rahmet" spellcheck="false">
         </div>
-        <div class="field">
-          <label>ARACINI SEÇ</label>
-          <div class="cars" id="carsEntry"></div>
+        <div class="modes">
+          <button class="mode" id="btnModePrac" type="button"><b>ANTRENMAN</b><span>İnternetsiz. Botlarla yarış, istediğin pist ve araç.</span></button>
+          <button class="mode comp" id="btnModeComp" type="button"><b>REKABETÇİ</b><span>Online. Kurallar sabit, pist rastgele, en az 3 kişi. Ayrı skor tablosu.</span></button>
+          <button class="mode free" id="btnModeFree" type="button"><b>SERBEST</b><span>Online. Oda sahibi her şeyi ayarlar: pist, araçlar, güçler. Eğlence araçları burada.</span></button>
         </div>
+        <p class="err" id="entryErr" role="alert"></p>
+        <div class="row split">
+          <span></span>
+          <div class="status" id="netStatus" data-s="wait"><span class="dot"></span><span id="netText">Sunucuya bağlanılıyor…</span></div>
+        </div>
+      </section>
+
+      <!-- online: hızlı katıl / oda kur / kodla katıl -->
+      <section class="card" id="scrOnline" hidden>
+        <div class="row split"><h2 id="onlineTitle">REKABETÇİ</h2><button class="btn ghost" id="btnOBack">GERİ</button></div>
+        <p class="note" id="onlineDesc"></p>
         <div class="row">
           <button class="btn go" id="btnQuick">HIZLI KATIL</button>
           <button class="btn" id="btnCreate">ODA KUR</button>
           <input type="text" id="code" maxlength="4" placeholder="KOD" aria-label="Oda kodu" autocomplete="off" spellcheck="false">
           <button class="btn ghost" id="btnJoin">KATIL</button>
         </div>
-        <p class="err" id="entryErr" role="alert"></p>
-        <div class="sep">ya da</div>
-        <div class="row split">
-          <button class="btn ghost" id="btnPractice">ANTRENMAN</button>
-          <div class="status" id="netStatus" data-s="wait"><span class="dot"></span><span id="netText">Sunucuya bağlanılıyor…</span></div>
-        </div>
+        <p class="err" id="onlineErr" role="alert"></p>
       </section>
 
       <!-- oda -->
       <section class="card" id="scrRoom" hidden>
         <div class="row split">
           <div>
-            <h2>ODA KODU</h2>
+            <h2>ODA KODU <span class="mbadge" id="roomMode"></span></h2>
             <div class="code-big" id="roomCode">----</div>
           </div>
           <div class="row">
@@ -256,23 +283,40 @@ pre{margin:0;background:#061526;border:1px solid var(--line);padding:14px;overfl
           <label>PİLOTLAR <span id="pcount"></span></label>
           <ul class="plist" id="plist"></ul>
         </div>
-        <div class="field">
-          <label>ARACIN</label>
-          <div class="cars" id="carsRoom"></div>
+        <div id="compBox" hidden>
+          <div class="rules">
+            <span><b>5</b> TUR</span><span>PİST <b>RASTGELE</b></span><span>ENGEL <b>AZ</b></span><span>EŞYA <b>NORMAL</b></span><span>ÇARPIŞMA <b>AÇIK</b></span><span>YAKALAMA <b>KAPALI</b></span>
+          </div>
+          <p class="note">Herkes hazır olunca pist rastgele seçilir, sonra herkes 15 saniyede aracını seçer. Seçmeyene rastgele araç verilir. En az 3 pilot gerekir.</p>
         </div>
-        <div class="field">
-          <label>YARIŞ AYARLARI <span id="cfgHint"></span></label>
-          <div class="cfg" id="cfgRoom"></div>
+        <div id="freeBox">
+          <div class="field">
+            <label>ARACIN</label>
+            <div class="cars" id="carsRoom"></div>
+          </div>
+          <div class="field">
+            <label>YARIŞ AYARLARI <span id="cfgHint"></span></label>
+            <div class="cfg" id="cfgRoom"></div>
+          </div>
         </div>
         <p class="err" id="roomErr" role="alert"></p>
         <div class="row split">
           <p class="note" id="roomNote"></p>
           <button class="btn go" id="btnStart">YARIŞI BAŞLAT</button>
+          <button class="btn go" id="btnReady" hidden>HAZIRIM</button>
         </div>
+      </section>
+      <!-- rekabetçi: araç seçimi -->
+      <section class="card" id="scrPick" hidden>
+        <div class="row split"><div><h2>ARACINI SEÇ</h2><div class="pickTrack" id="pickTrack">PİST</div></div><div class="pickTime" id="pickTime">15</div></div>
+        <div class="cars four" id="carsPick"></div>
+        <ul class="plist" id="pickList"></ul>
+        <p class="note">Süre bitince seçmeyene rastgele araç verilir.</p>
       </section>
       <!-- antrenman ayarları -->
       <section class="card" id="scrPractice" hidden>
-        <div class="row split"><h2>ANTRENMAN · 3 BOTA KARŞI</h2><button class="btn ghost" id="btnPBack">GERİ</button></div>
+        <div class="row split"><h2>ANTRENMAN · BOTLARA KARŞI</h2><button class="btn ghost" id="btnPBack">GERİ</button></div>
+        <div class="field"><label>ARACIN</label><div class="cars" id="carsPrac"></div></div>
         <div class="cfg" id="cfgPractice"></div>
         <div class="row split"><p class="note">Antrenman dereceleri sadece bu cihazda tutulur, skor tablosuna online yarışlar yazılır.</p><button class="btn go" id="btnPStart">BAŞLA</button></div>
       </section>
@@ -289,6 +333,7 @@ pre{margin:0;background:#061526;border:1px solid var(--line);padding:14px;overfl
 <div class="drawer" id="drawerBoard" hidden>
   <div class="dcard" role="dialog" aria-label="Skor tablosu">
     <div class="dhead"><h2>SKOR TABLOSU</h2><button class="btn ghost" data-close>KAPAT</button></div>
+    <div class="tabs" role="tablist"><button class="tab" id="lbComp" aria-selected="true">REKABETÇİ</button><button class="tab" id="lbFree" aria-selected="false">SERBEST</button></div>
     <div class="tabs" id="lbTracks"></div>
     <div class="tabs" role="tablist">
       <button class="tab" role="tab" id="tabLap" aria-selected="true">EN HIZLI TUR</button>
@@ -394,6 +439,7 @@ void loop() {
 
 <script src="logo.js"></script>
 <script src="models.js"></script>
+<script src="campus.js"></script>
 <script src="music.js"></script>
 <script src="game.js"></script>
 </body>

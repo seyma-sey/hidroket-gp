@@ -14,18 +14,29 @@ const UPSTASH_URL = (process.env.UPSTASH_REDIS_REST_URL || "").trim().replace(/\
 const UPSTASH_TOKEN = (process.env.UPSTASH_REDIS_REST_TOKEN || "").trim().replace(/^"|"$/g, "");
 const LB_KEY = "hidroket-gp-leaderboard";
 
-const TRACKS = ["istanbul", "monaco", "spa", "monza", "baku", "silverstone", "podyum"];
-const MIN_LAP = { istanbul: 12, monaco: 10, spa: 14, monza: 11, baku: 12, silverstone: 12, podyum: 11 };   // saniye: bundan hızlı tur imkânsız
-const CFG_DEF = { track: "istanbul", laps: 3, items: 1, obst: 1, catchup: 1, collide: 1 };
+/* İki online mod:
+   - rekabetçi (comp): kurallar sabit, pist rastgele, araç seçimi yarıştan önce 15 sn, en az 3 oyuncu, ayrı skor tablosu
+   - serbest (free): oda sahibi her şeyi ayarlar (pist, tur, eşyalar, hangi araçlar/güçler seçilebilir) */
+const COMP_TRACKS = ["istanbul", "monaco", "spa", "monza", "baku", "silverstone", "podyum"];
+const TRACKS = [...COMP_TRACKS, "tandogan", "golbasi"];          // serbest modda hepsi
+const MIN_LAP = { istanbul: 12, monaco: 10, spa: 14, monza: 11, baku: 12, silverstone: 12, podyum: 11, tandogan: 8, golbasi: 9 };   // saniye: bundan hızlı tur imkânsız
+const COMP_CARS = ["turaz", "pars", "ucube", "heli"];
+const CARS = [...COMP_CARS, "hk1", "halis", "patpat"];
+const ITEMS = ["turbo", "super", "oil", "shield", "zap"];
+const CFG_DEF = { track: "istanbul", laps: 3, items: 1, obst: 1, catchup: 1, collide: 1, cars: CARS, itemSet: ITEMS };
+const COMP_CFG = { laps: 5, items: 1, obst: 1, catchup: 0, collide: 1, cars: COMP_CARS, itemSet: ITEMS };
+const COMP_MIN = 3, PICK_MS = 15000;
 function cleanCfg(c) {
   c = c || {}; const n = (v, lo, hi, d) => Number.isInteger(v) && v >= lo && v <= hi ? v : d;
+  const sub = (a, all, d) => Array.isArray(a) ? all.filter(x => a.includes(x)) : d;
+  let cars = sub(c.cars, CARS, CARS); if (!cars.length) cars = ["turaz"];
   return { track: TRACKS.includes(c.track) || c.track === "random" ? c.track : CFG_DEF.track, laps: n(c.laps, 1, 10, 3),
-    items: n(c.items, 0, 2, 1), obst: n(c.obst, 0, 3, 1), catchup: n(c.catchup, 0, 1, 1), collide: n(c.collide, 0, 1, 1) };
+    items: n(c.items, 0, 2, 1), obst: n(c.obst, 0, 3, 1), catchup: n(c.catchup, 0, 1, 1), collide: n(c.collide, 0, 1, 1),
+    cars, itemSet: sub(c.itemSet, ITEMS, ITEMS) };
 }
 const MAX_PLAYERS = 8;
 const FINISH_GRACE = 30000;    // ilk araç bitirince diğerlerine kalan süre (ms)
 const RACE_TIMEOUT = 6 * 60000;
-const CARS = ["turaz", "pars", "ucube", "heli", "hk1", "halis"];
 const TICK = 50;               // durum yayını (ms)
 
 /* ---------------- statik dosyalar ---------------- */
@@ -64,8 +75,10 @@ async function loadBoard() {
       console.log("Skor tablosu dosyadan yüklendi.");
     } else ok = true;
   } catch (e) { console.warn("Skor tablosu yüklenemedi:", e.message); }
-  if (!board || typeof board.tracks !== "object") board = { tracks: {} };   // eski kampüs pistinin kayıtları bırakılır
+  if (!board || typeof board.tracks !== "object") board = { tracks: {} };   // board.tracks = serbest mod (eski kayıtların hepsi buraya geçti)
+  if (!board.comp || typeof board.comp.tracks !== "object") board.comp = { tracks: {} };   // rekabetçi mod
   for (const t of TRACKS) { const b = board.tracks[t] = board.tracks[t] || {}; b.laps = Array.isArray(b.laps) ? b.laps : []; b.races = Array.isArray(b.races) ? b.races : []; }
+  for (const t of COMP_TRACKS) { const b = board.comp.tracks[t] = board.comp.tracks[t] || {}; b.laps = Array.isArray(b.laps) ? b.laps : []; b.races = Array.isArray(b.races) ? b.races : []; }
   // tek seferlik: nerf öncesi Halis'in scooterı kayıtları adaletsizdi, silinir (yükleme başarılıysa)
   if (ok) {
     board.done = Array.isArray(board.done) ? board.done : [];
@@ -113,18 +126,45 @@ function cleanName(n) {
 function send(ws, msg) { if (ws.readyState === 1) ws.send(JSON.stringify(msg)); }
 function broadcast(room, msg) { const s = JSON.stringify(msg); for (const p of room.players.values()) if (p.ws.readyState === 1) p.ws.send(s); }
 function roomInfo(room) {
-  return { type: "room", code: room.code, host: room.host, phase: room.phase, cfg: room.cfg,
-    players: [...room.players.values()].map(p => ({ id: p.id, name: p.name, car: p.car, racing: p.racing, finished: p.finished })) };
+  return { type: "room", code: room.code, kind: room.kind, host: room.host, phase: room.phase, cfg: room.cfg, min: COMP_MIN,
+    pickLeft: room.phase === "pick" ? Math.max(0, room.pickEnd - Date.now()) : 0, track: room.phase === "pick" && room.race ? room.race.track : null,
+    players: [...room.players.values()].map(p => ({ id: p.id, name: p.name, car: p.car, racing: p.racing, finished: p.finished, ready: !!p.ready, picked: !!p.picked })) };
 }
 function pushRoom(room) { broadcast(room, roomInfo(room)); }
-function makeRoom() { const room = { code: newCode(), host: 0, players: new Map(), phase: "lobby", raceStart: 0, firstFinish: 0, timers: [], cfg: Object.assign({}, CFG_DEF), race: null, hz: 0 }; rooms.set(room.code, room); return room; }
+function makeRoom(kind) {
+  kind = kind === "comp" ? "comp" : "free";
+  const room = { code: newCode(), kind, host: 0, players: new Map(), phase: "lobby", raceStart: 0, firstFinish: 0, timers: [], hz: 0, race: null, pickEnd: 0,
+    cfg: kind === "comp" ? Object.assign({ track: "random" }, COMP_CFG) : Object.assign({}, CFG_DEF) };
+  rooms.set(room.code, room); return room;
+}
+const allowedCars = room => room.kind === "comp" ? COMP_CARS : room.cfg.cars;
+function fixCar(p, room) { const a = allowedCars(room); if (!a.includes(p.car)) p.car = a[0]; }
+// rekabetçi: herkes hazırsa ve en az 3 kişi varsa araç seçimine geç
+function checkCompStart(room) {
+  if (room.kind !== "comp" || room.phase !== "lobby") return;
+  const ps = [...room.players.values()];
+  if (ps.length >= COMP_MIN && ps.every(p => p.ready)) startPick(room);
+}
+function startPick(room) {
+  clearTimers(room);
+  room.race = Object.assign({ track: COMP_TRACKS[Math.random() * COMP_TRACKS.length | 0] }, COMP_CFG);
+  room.phase = "pick"; room.pickEnd = Date.now() + PICK_MS;
+  for (const p of room.players.values()) p.picked = false;
+  broadcast(room, { type: "pick", ms: PICK_MS, track: room.race.track });
+  pushRoom(room);
+  room.timers.push(setTimeout(() => {
+    for (const p of room.players.values()) if (!p.picked) p.car = COMP_CARS[Math.random() * COMP_CARS.length | 0];   // seçmeyene rastgele araç
+    startRace(room);
+  }, PICK_MS));
+}
 function clearTimers(room) { room.timers.forEach(clearTimeout); room.timers = []; }
 function joinRoom(p, room) {
   leaveRoom(p);
   if (room.players.size >= MAX_PLAYERS) return send(p.ws, { type: "error", msg: "Oda dolu (en fazla " + MAX_PLAYERS + " kişi)." });
-  room.players.set(p.id, p); p.room = room; p.racing = false; p.finished = false;
+  room.players.set(p.id, p); p.room = room; p.racing = false; p.finished = false; p.ready = false; p.picked = false;
   if (!room.host) room.host = p.id;
-  send(p.ws, { type: "joined", code: room.code });
+  fixCar(p, room);
+  send(p.ws, { type: "joined", code: room.code, kind: room.kind });
   pushRoom(room);
 }
 function leaveRoom(p) {
@@ -135,14 +175,17 @@ function leaveRoom(p) {
   broadcast(room, { type: "left", id: p.id });
   pushRoom(room);
   if (room.phase === "race") checkRaceEnd(room);
+  checkCompStart(room);
 }
 function startRace(room) {
   clearTimers(room);
   const order = [...room.players.values()].sort(() => Math.random() - .5);
   order.forEach((p, i) => Object.assign(p, { racing: true, finished: false, lap: 0, sect: 0, lapStart: 0, best: 0, total: 0, laps: [], f: 0, st: null, slot: i, lastAct: 0 }));
-  const cfg = Object.assign({}, room.cfg);
-  if (cfg.track === "random") cfg.track = TRACKS[Math.random() * TRACKS.length | 0];
-  room.race = cfg;
+  let cfg;
+  if (room.kind === "comp") cfg = Object.assign({}, room.race);
+  else { cfg = Object.assign({}, room.cfg); if (cfg.track === "random") cfg.track = TRACKS[Math.random() * TRACKS.length | 0]; }
+  for (const p of room.players.values()) fixCar(p, room);
+  cfg.kind = room.kind; room.race = cfg;
   room.phase = "count";
   broadcast(room, { type: "count", ms: 3600, grid: order.map(p => p.id), cfg, seed: (Math.random() * 1e9) | 0 });
   pushRoom(room);
@@ -167,7 +210,7 @@ function endRace(room) {
   pushRoom(room);
   room.timers.push(setTimeout(() => {
     room.phase = "lobby";
-    for (const p of room.players.values()) { p.racing = false; p.finished = false; }
+    for (const p of room.players.values()) { p.racing = false; p.finished = false; p.ready = false; p.picked = false; }
     pushRoom(room);
   }, 12000));
 }
@@ -183,7 +226,8 @@ function onLap(p, m) {
   const room = p.room; if (!room || room.phase !== "race" || !p.racing || p.finished) return;
   const n = m.n | 0, time = +m.time, total = +m.total;
   const elapsed = (Date.now() - room.raceStart) / 1000;
-  const rc = room.race || CFG_DEF, tb = board.tracks[rc.track];
+  const rc = room.race || CFG_DEF, tbl = room.kind === "comp" ? board.comp.tracks : board.tracks;
+  const tb = tbl[rc.track] = tbl[rc.track] || { laps: [], races: [] };
   if (n !== p.lap + 1 || p.sect < 3 || !(time >= (MIN_LAP[rc.track] || 10)) || !(total >= elapsed - 2.5) || total > elapsed + 1) {
     send(p.ws, { type: "lapRejected", n }); return;
   }
@@ -193,7 +237,7 @@ function onLap(p, m) {
   broadcast(room, { type: "lap", id: p.id, n, time });
   if (n >= rc.laps) {
     p.finished = true;
-    if (rc.laps === 3) rec = addRecord(tb.races, { name: p.name, car: p.car, obst: rc.obst, time: +total.toFixed(3), date: Date.now() }) || rec;
+    if (rc.laps === (room.kind === "comp" ? COMP_CFG.laps : 3)) rec = addRecord(tb.races, { name: p.name, car: p.car, obst: rc.obst, time: +total.toFixed(3), date: Date.now() }) || rec;
     broadcast(room, { type: "finish", id: p.id, total });
     if (!room.firstFinish) { room.firstFinish = Date.now(); room.timers.push(setTimeout(() => endRace(room), FINISH_GRACE)); broadcast(room, { type: "grace", ms: FINISH_GRACE }); }
     checkRaceEnd(room);
@@ -266,7 +310,7 @@ function onConnection(ws) {
     if (!m || typeof m.type !== "string") return;
     switch (m.type) {
       case "hello": p.name = cleanName(m.name); if (CARS.includes(m.car)) p.car = m.car; break;
-      case "create": { p.name = cleanName(m.name); if (CARS.includes(m.car)) p.car = m.car; joinRoom(p, makeRoom()); break; }
+      case "create": { p.name = cleanName(m.name); if (CARS.includes(m.car)) p.car = m.car; joinRoom(p, makeRoom(m.kind)); break; }
       case "join": {
         p.name = cleanName(m.name); if (CARS.includes(m.car)) p.car = m.car;
         const room = rooms.get(String(m.code || "").toUpperCase().trim());
@@ -275,12 +319,18 @@ function onConnection(ws) {
       }
       case "quick": {
         p.name = cleanName(m.name); if (CARS.includes(m.car)) p.car = m.car;
-        let room = [...rooms.values()].find(r => r.phase === "lobby" && r.players.size < MAX_PLAYERS);
-        joinRoom(p, room || makeRoom()); break;
+        const kind = m.kind === "comp" ? "comp" : "free";
+        let room = [...rooms.values()].find(r => r.kind === kind && r.phase === "lobby" && r.players.size < MAX_PLAYERS);
+        joinRoom(p, room || makeRoom(kind)); break;
       }
-      case "car": if (CARS.includes(m.car) && p.room && !p.racing) { p.car = m.car; pushRoom(p.room); } break;
+      case "car": {
+        const room = p.room; if (!room || p.racing || !allowedCars(room).includes(m.car)) break;
+        if (room.kind === "comp" && room.phase !== "pick") { p.car = m.car; break; }   // rekabetçide seçim sadece seçim süresinde sayılır
+        p.car = m.car; if (room.phase === "pick") p.picked = true; pushRoom(room); break;
+      }
+      case "ready": if (p.room && p.room.kind === "comp" && p.room.phase === "lobby") { p.ready = !!m.on; pushRoom(p.room); checkCompStart(p.room); } break;
       case "leave": leaveRoom(p); send(ws, { type: "leftRoom" }); break;
-      case "start": if (p.room && p.room.host === p.id && p.room.phase === "lobby") startRace(p.room); break;
+      case "start": if (p.room && p.room.kind === "free" && p.room.host === p.id && p.room.phase === "lobby") startRace(p.room); break;
       case "s": {   // sürüş durumu
         if (!p.room || !p.racing || !Array.isArray(m.d) || m.d.length < 7) return;
         const d = m.d.map(Number); if (d.some(v => !Number.isFinite(v))) return;
@@ -289,7 +339,8 @@ function onConnection(ws) {
         break;
       }
       case "lap": onLap(p, m); break;
-      case "cfg": if (p.room && p.room.host === p.id && p.room.phase === "lobby") { p.room.cfg = cleanCfg(m.cfg); pushRoom(p.room); } break;
+      case "cfg": if (p.room && p.room.kind === "free" && p.room.host === p.id && p.room.phase === "lobby") {
+        p.room.cfg = cleanCfg(m.cfg); for (const q of p.room.players.values()) fixCar(q, p.room); pushRoom(p.room); } break;
       case "drop": case "zap": {   // eşya: yağ lekesi bırak / şimşek
         const room = p.room; if (!room || room.phase !== "race" || !p.racing) return;
         const now = Date.now(); if (now - (p.lastAct || 0) < 800) return; p.lastAct = now;

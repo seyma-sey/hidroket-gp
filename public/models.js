@@ -226,6 +226,69 @@ const SPEC = {
       box(30.4, 32, 4.8, 9.2, 29.2, 30.2, HR);                                                                          // perçem
       box(26.4, 30.6, 4.2, 4.8, 26.8, 30, HR); box(26.4, 30.6, 9.2, 9.8, 26.8, 30, HR);                                 // yan saçlar
     }
+  },
+  /* HASAN FURKAN'IN PATPATI: kırmızı kasa ve kasa kapakları (beyaz şeritler, siyah üst parmaklık), önde açıkta
+     turuncu tek silindirli motor ve siyah hava filtresi, kırmızı boru kafes, kırmızı ön panel ve farlar,
+     sarı "KEL OĞLAN" tamponu, çelik jantlar. Direksiyonda Hasan Furkan: bej şapka, gözlük, neon sarı-mavi tişört, kamuflaj pantolon. */
+  patpat: {
+    W: 20, H: 24, clear: 0, custom: true,
+    wheels: [{ u: .2, r: 4.2, spokes: 5, hub: 0xc9ced3 }, { u: .8, r: 4.2, spokes: 5, hub: 0xc9ced3 }],
+    extras(put) {
+      const box = (x0, x1, y0, y1, z0, z1, c) => { for (let x = x0; x < x1; x += .6) for (let y = y0; y < y1; y += .6) for (let z = z0; z < z1; z += .6) put(x, y, z, typeof c === 'function' ? c(x, y, z) : c); };
+      const line = (a, b, r, c) => { const n = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]) / .4); for (let i = 0; i <= n; i++) { const t = i / n; box(a[0] + (b[0] - a[0]) * t - r, a[0] + (b[0] - a[0]) * t + r, a[1] + (b[1] - a[1]) * t - r, a[1] + (b[1] - a[1]) * t + r, a[2] + (b[2] - a[2]) * t - r, a[2] + (b[2] - a[2]) * t + r, c); } };
+      const RD = 0xd42a22, RDd = 0x9a1c16, BK = 0x18191c, WH = 0xeceeee, OR = 0xf27a26, YE = 0xf2c230;
+      // şasi
+      box(4, 46, 3, 6, 3.4, 5, BK); box(4, 46, 14, 17, 3.4, 5, BK);
+      // kasa: taban, yan kapaklar (beyaz şeritler, mandallar), ön/arka duvar, siyah parmaklık
+      box(1, 27, .5, 19.5, 5, 6.2, RDd);
+      const side = (x, y, z) => (Math.abs(z - 7.2) < .35 || Math.abs(z - 12.2) < .35) ? WH : ((Math.abs(x - 6) < .5 || Math.abs(x - 12) < .5 || Math.abs(x - 18) < .5 || Math.abs(x - 24) < .5) && z > 10 && z < 11.6) ? 0xf4f4f4 : RD;
+      box(1, 27, .5, 1.5, 6.2, 13, side); box(1, 27, 18.5, 19.5, 6.2, 13, side);
+      box(1, 2, .5, 19.5, 6.2, 13, (x, y, z) => (Math.abs(z - 9.5) < .8 && (Math.abs(y - 3) < 1.2 || Math.abs(y - 17) < 1.2)) ? 0xe8322a : side(3, y, z));
+      box(26, 27, .5, 19.5, 6.2, 13, RD);
+      box(1, 27, 0, 1.6, 13, 13.8, BK); box(1, 27, 18.4, 20, 13, 13.8, BK); box(1, 2, 0, 20, 13, 13.8, BK); box(26, 27, 0, 20, 13, 13.8, BK);
+      for (let x = 4; x < 26; x += 4) box(x, x + .6, 0, 20, 13, 13.6, BK);
+      // kabin: yan panel beyaz çapraz çıtalı, koltuk ve kırmızı boru çerçeve, gri basamak sacı
+      const slat = (x, y, z) => (((x - 27) * .9 + z) % 2.4 < .7) ? WH : RD;
+      box(27, 34, .5, 1.5, 3.6, 9, slat); box(27, 34, 18.5, 19.5, 3.6, 9, slat);
+      box(31, 38, 1.5, 18.5, 5.4, 6.2, (x, y) => ((x * 1.6 | 0) + (y * 1.6 | 0)) % 2 ? 0x868b91 : 0x6f747a);
+      box(28, 31.4, 9, 16, 8.4, 10, RD); box(27, 28.4, 9, 16, 10, 14, 0xb82018);
+      for (const y of [1, 19]) { line([27.5, y, 9], [27.5, y, 15], .5, RD); line([27.5, y, 15], [33, y, 15], .5, RD); line([33, y, 15], [34, y, 9], .5, RD); }
+      // motor: turuncu blok, kanatçıklar, volan, siyah hava filtresi, paslı egzoz
+      box(37, 44, 6, 14, 6, 12.4, (x, y, z) => (z > 10.6 && ((x * 1.7 | 0) % 2)) ? 0xd8661a : OR);
+      box(38.4, 42.6, 7.2, 12.8, 12.4, 13.6, 0x9aa0a6);
+      box(44, 45, 6.6, 13.4, 6.4, 12, (x, y, z) => Math.hypot(y - 10, z - 9.2) < 2.2 ? 0x2a2c30 : 0x3c3f44);
+      box(38, 41.4, 12.4, 15.6, 12.4, 16, (x, y, z) => z > 15.2 ? 0x30333a : BK);
+      line([39, 4.6, 12], [33, 3.4, 13], .6, 0x8a4a2a); line([33, 3.4, 13], [28, 3, 12.4], .6, 0x7a4024);
+      // ön kafes (kırmızı borular)
+      for (const y of [1, 19]) { line([38, y, 6], [38, y, 15.4], .55, RD); line([46.6, y, 6], [46.6, y, 15.4], .55, RD); line([38, y, 15.4], [46.6, y, 15.4], .55, RD); line([38, y, 11], [46.6, y, 11], .45, RD); }
+      line([46.6, 1, 15.4], [46.6, 19, 15.4], .55, RD); line([46.6, 1, 11], [46.6, 19, 11], .45, RD); line([38, 1, 15.4], [38, 19, 15.4], .55, RD);
+      for (const y of [6.5, 13.5]) line([46.6, y, 8.6], [46.6, y, 15.4], .45, RD);
+      // ön panel, farlar, sarı "KEL OĞLAN" tampon ve alt boru
+      box(44, 48, 0, 20, 4.4, 8.6, (x, y, z) => x > 47.4 && z > 5.4 && z < 7.8 && ((y > 1.4 && y < 5) || (y > 15 && y < 18.6)) ? (z > 7 ? 0xc9cdc8 : 0xa4a9a4) : RD);
+      box(48, 48.8, 5.6, 14.4, 5.2, 7.8, (x, y, z) => (z > 5.8 && z < 7.2 && ((y * 2.2 | 0) % 3 === 0) && Math.abs(y - 10) > .8) ? 0x16171a : YE);
+      line([48.4, 3, 4], [48.4, 17, 4], .45, RD); line([48.4, 6, 4], [47.6, 8, 2.6], .4, YE); line([48.4, 14, 4], [47.6, 12, 2.6], .4, YE);
+      // direksiyon
+      line([34, 12, 9], [36.4, 12, 15], .5, BK);
+      for (let a = 0; a < Math.PI * 2; a += .18) put(36.8 + Math.sin(a) * .8, 12 + Math.cos(a) * 2.7, 15.6 + Math.sin(a) * 2.4, BK);
+      /* Hasan Furkan */
+      const SK = 0xd29a72, NE = 0xc8ee3c, NB = 0x2a4fb8;
+      const CAMO = (x, y, z) => [0x5c6038, 0x7c6c44, 0x3a3f28, 0x6a7448][((x * 1.3 | 0) * 7 + (y * 1.3 | 0) * 3 + (z * 1.3 | 0) * 5) % 4];
+      for (const y of [10.6, 13.6]) { line([29.4, y, 10.4], [35.6, y + (y < 12 ? -.3 : .3), 11.4], 1, CAMO); line([35.6, y + (y < 12 ? -.3 : .3), 11.4], [37.2, y + (y < 12 ? -.4 : .4), 7.2], .9, CAMO);
+        box(36.6, 39.2, y - 1, y + 1, 6.2, 7.4, (x, yy, z) => z > 6.9 ? 0xd8d04a : 0x80857a); }                                  // bacaklar ve ayakkabılar
+      for (let z = 10.2; z < 17.6; z += .6) { const lean = (z - 10.2) * -.06; box(28.6 + lean, 31.4 + lean, 9.8, 14.6, z, z + .6, (x, y) => (x > 30.6 + lean && Math.abs(z - 13.6 - Math.abs(y - 12.2) * .45) < .8) ? NB : NE); }   // neon tişört + mavi şerit
+      line([30, 9.4, 16.8], [32.4, 8.8, 14.4], .85, NE); line([30, 15, 16.8], [32.4, 15.6, 14.4], .85, NE);
+      line([32.4, 8.8, 14.4], [36.2, 10, 15.2], .7, SK); line([32.4, 15.6, 14.4], [36.2, 14.2, 15.2], .7, SK);                                    // kollar direksiyonda
+      box(29.4, 31.2, 11.2, 13.4, 17.4, 18.2, SK);                                                                                                    // boyun
+      box(28.8, 31.8, 10.4, 14, 18, 21.6, (x, y, z) => {
+        if (x > 31.2) { if (Math.abs(z - 20.1) < .35 && y > 10.6 && y < 13.8) return 0x1c1d20;                                                        // gözlük çerçevesi
+                        if (z > 19.2 && z < 20.1 && ((y > 10.8 && y < 11.9) || (y > 12.5 && y < 13.6))) return 0x3a4652;                               // camlar
+                        if (Math.abs(z - 18.6) < .3 && Math.abs(y - 12.2) < .9) return 0x9a5a44; }                                                      // ağız
+        if (x < 29.4 && z > 19) return 0x2a1e16;                                                                                                          // ense saç
+        return SK; });
+      box(28.6, 32.2, 10.2, 14.2, 21.4, 22.8, 0xb9a986); box(32.2, 34.2, 10.6, 13.8, 21.4, 21.9, 0xa8987a);                                         // bej şapka + siper
+      box(28.6, 29.4, 10.2, 14.2, 20.4, 21.4, 0x2a1e16);
+    }
+
   }
 };
 function digit3(u, z, v) {   // kuyruktaki büyük "3"

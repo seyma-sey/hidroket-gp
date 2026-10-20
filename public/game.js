@@ -76,6 +76,8 @@ const CARS = [
   // gücü birkaç saniyede bir rastgele değişir; ortalamada dengeli
   { key: 'hk1', name: 'HİDROKET-1', num: '3', trait: 'Gizemli güç', col: '#ff7b00', myst: true, s: { top: .72, acc: .68, turn: .66, grip: .66 } },
   // normalde en yavaş, turboda en hızlı
+  // eğlence aracı: yavaş ama durdurulamaz (engelleri ezer, yağdan etkilenmez, pist kenarında yavaşlamaz)
+  { key: 'patpat', name: "HASAN FURKAN'IN PATPATI", short: 'PATPAT', trait: 'Durdurulamaz', col: '#ffd23f', tank: true, offroad: true, s: { top: .32, acc: .5, turn: .72, grip: .8 } },
   { key: 'halis', name: "HALİS'İN SCOOTERI", short: 'HALİS', trait: 'Turbo canavarı', col: '#2f4fd8', tb: [1.9, 2.5], pick: 25, eager: true, s: { top: .4, acc: .62, turn: .95, grip: .85 } }
 ];
 const cname = d => d.short || d.name;
@@ -158,6 +160,25 @@ function makeBuilding(r) {
   g.fillStyle = '#3b3328'; g.fillRect((w / 2 | 0) - 2, h - 6, 4, 6);
   return c;
 }
+// kampüs binaları: 60-70'lerin bej beton fakülte blokları, tuğla binalar, Gölbaşı'nın yeni mühendislik binaları
+const CAMPUS_BLD = [];
+function makeCampusBuilding(r, style) {
+  const w = 44 + (r() * 20 | 0), floors = style === 'new' ? 3 + (r() * 2 | 0) : 3 + (r() * 3 | 0), h = floors * 9 + 6;
+  const [c, g] = mk(w, h + 3);
+  const wall = style === 'brick' ? '#b0603e' : style === 'new' ? '#e6e8ea' : ['#e2d6b8', '#d8c9a4', '#e9dfc8'][r() * 3 | 0];
+  g.fillStyle = wall; g.fillRect(0, 3, w, h);
+  g.fillStyle = '#00000026'; g.fillRect(w - 4, 3, 4, h);
+  g.fillStyle = style === 'new' ? '#9aa4ad' : '#8e8574'; g.fillRect(0, 0, w, 4);            // düz çatı / parapet
+  for (let f = 0; f < floors; f++) {
+    const y = 8 + f * 9;
+    if (style === 'new') { g.fillStyle = '#3d6f96'; g.fillRect(2, y, w - 6, 5); g.fillStyle = '#7fb2d4'; for (let x = 4; x < w - 6; x += 7) g.fillRect(x, y, 1, 5); }
+    else { g.fillStyle = style === 'brick' ? '#efe2d0' : '#b9ab8a'; g.fillRect(1, y + 6, w - 5, 1);     // kat bandı
+      for (let x = 3; x < w - 6; x += 5) { g.fillStyle = '#2d3a46'; g.fillRect(x, y, 3, 5); g.fillStyle = '#ffffff40'; g.fillRect(x, y, 3, 1); } }
+  }
+  g.fillStyle = '#3b3328'; g.fillRect((w / 2 | 0) - 3, h - 4, 6, 7);                       // giriş
+  g.fillStyle = '#5a5a52'; g.fillRect(0, h + 1, w, 2);
+  return c;
+}
 function buildArt() {
   workshop = makeWorkshop(true); workshopEmpty = makeWorkshop(false);
   imgPine = (() => { const [c, g] = mk(18, 36); pine(g, 9, 33, 32, '#1b5a33', '#2e8049'); return c; })();
@@ -199,6 +220,7 @@ function buildArt() {
   ICONS.shield = ic(["............", "..bbbbbbbb..", "..bLLLLLLb..", "..bLwwwwLb..", "..bLwLLLLb..", "..bLLLLLLb..", "..bLLLLLLb..", "...bLLLLb...", "...bLLLLb...", "....bLLb....", ".....bb.....", "............"], { b: '#0b2a44', L: '#2a94d8', w: '#bfe9fb' });
   ICONS.zap = ic([".......yy...", "......yy....", ".....yy.....", "....yy......", "...yyyyyy...", "......yy....", ".....yy.....", "....yy......", "...yy.......", "..yy........", "..y.........", "............"], { y: '#ffd84a' });
   for (let i = 0; i < 10; i++) BUILDINGS.push(makeBuilding(rng(31 + i * 17)));
+  for (let i = 0; i < 9; i++) CAMPUS_BLD.push(makeCampusBuilding(rng(77 + i * 13), ['old', 'old', 'brick', 'new'][i % 4]));
 }
 
 /* =========================================================
@@ -241,9 +263,23 @@ const TRACKS = {
     cp: [[597,1722],[1047,1722],[1422,1707],[1617,1617],[1647,1437],[1497,1347],[1272,1362],[1122,1272],[1137,1107],[1272,987],[1497,957],[1677,867],
       [1722,687],[1617,537],[1422,522],[1272,627],[1107,687],[942,597],[897,432],[777,327],[582,357],[447,507],[477,717],[627,837],
       [747,987],[657,1137],[447,1167],[327,1317],[357,1542],[447,1677]],
-    h: [10,10,12,16,20,22,22,24,26,28,30,32,34,34,32,30,30,32,34,34,32,28,24,22,20,18,16,14,12,10] }
+    h: [10,10,12,16,20,22,22,24,26,28,30,32,34,34,32,30,30,32,34,34,32,28,24,22,20,18,16,14,12,10] },
+  // Ankara Üniversitesi kampüsleri: pist, kampüsün gerçek yollarından (OpenStreetMap) çıkarıldı
+  tandogan: { hk: 1, name: 'TANDOĞAN KAMPÜSÜ', short: 'TANDOĞAN', tw: 40, theme: 'tandogan', campus: 'tandogan', rot: 4,
+    h: [8, 9, 10, 11, 12, 13, 14, 15, 15, 14, 13, 12, 11, 10, 9, 9, 8, 7, 6, 6, 6, 7, 7, 8] },
+  golbasi: { hk: 1, name: 'GÖLBAŞI KAMPÜSÜ', short: 'GÖLBAŞI', tw: 44, theme: 'golbasi', campus: 'golbasi', rot: 5,
+    h: [6, 6, 7, 8, 9, 10, 11, 12, 12, 12, 11, 10, 9, 8, 8, 9, 10, 11, 12, 12, 11, 10, 9, 8, 7, 6, 6] }
 };
-const TRACK_KEYS = ['istanbul', 'monaco', 'spa', 'monza', 'baku', 'silverstone', 'podyum'];
+for (const k in TRACKS) { const T = TRACKS[k]; if (!T.campus) continue;
+  const d = window.HGP_CAMPUS && window.HGP_CAMPUS[T.campus];
+  if (!d) { delete TRACKS[k]; continue; }
+  const n = d.cp.length, rot = (T.rot || 0) % n;
+  T.cp = d.cp.slice(rot).concat(d.cp.slice(0, rot)); T.h = T.h.slice(rot).concat(T.h.slice(0, rot)); T.feat = d.f;
+}
+const COMP_TRACKS = ['istanbul', 'monaco', 'spa', 'monza', 'baku', 'silverstone', 'podyum'];   // rekabetçi + antrenman
+const TRACK_KEYS = [...COMP_TRACKS, 'tandogan', 'golbasi'].filter(k => TRACKS[k]);              // serbest modda hepsi
+const COMP_CARS = ['turaz', 'pars', 'ucube', 'heli'];
+const ITEM_KEYS = ['turbo', 'super', 'oil', 'shield', 'zap'];
 const SPACING = 6;
 function centerline(cp, hs) {
   const raw = [], n = cp.length, hh = i => hs ? hs[(i + n) % n] : 0;
@@ -352,6 +388,42 @@ const THEMES = {
   }
 };
 THEMES.monaco.seaY = 1602;
+// kampüs zemini: OpenStreetMap çokgenlerinden (binalar, orman, bahçe, saha, otopark, su, diğer yollar)
+const featsOf = key => (TRACKS[key].feat || []).map(f => { const i = f.indexOf(':'), a = f.slice(i + 1).split(',').map(Number), p = []; for (let j = 0; j + 1 < a.length; j += 2) p.push([a[j], a[j + 1]]); return { k: f.slice(0, i), p }; });
+function polyPath(g, p) { g.beginPath(); p.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.closePath(); }
+function inPoly(x, y, p) { let c = false; for (let i = 0, j = p.length - 1; i < p.length; j = i++) { const [xi, yi] = p[i], [xj, yj] = p[j]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) c = !c; } return c; }
+function campusGround(base, lawn, roof) {
+  return (g, r) => {
+    g.fillStyle = base; g.fillRect(0, 0, TS, TS);
+    for (let i = 0; i < 26000; i++) { g.fillStyle = r() < .5 ? '#00000010' : '#ffffff12'; g.fillRect(r() * TS | 0, r() * TS | 0, 2, 1); }
+    const F = featsOf(TK), fill = (k, col) => { for (const f of F) if (f.k === k) { g.fillStyle = col; polyPath(g, f.p); g.fill(); } };
+    fill('m', '#a39e6a'); fill('u', lawn); fill('g', '#6fa04a');
+    fill('f', '#3f6e34'); for (const f of F) if (f.k === 'f') { let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const [x, y] of f.p) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+      for (let i = 0; i < (x1 - x0) * (y1 - y0) / 60; i++) { const x = x0 + r() * (x1 - x0), y = y0 + r() * (y1 - y0); if (!inPoly(x, y, f.p)) continue; g.fillStyle = r() < .5 ? '#2f5a28' : '#4d7e3e'; g.fillRect(x | 0, y | 0, 3, 3); } }
+    for (const f of F) if (f.k === 'p') { g.fillStyle = '#4d9a42'; polyPath(g, f.p); g.fill(); g.strokeStyle = '#e8f0e0'; g.lineWidth = 2; g.stroke(); }
+    for (const f of F) if (f.k === 'k') { g.fillStyle = '#74787e'; polyPath(g, f.p); g.fill(); g.strokeStyle = '#d8dcdf'; g.lineWidth = 1; g.setLineDash([3, 6]); g.stroke(); g.setLineDash([]); }
+    for (const f of F) if (f.k === 'h') { g.fillStyle = '#c9b89a'; polyPath(g, f.p); g.fill(); g.strokeStyle = '#a8977a'; g.lineWidth = 2; g.stroke(); }
+    fill('w', '#3a7fb8');
+    g.lineCap = 'round'; g.lineJoin = 'round';
+    for (const f of F) if (f.k === 'r' || f.k === 'R' || f.k === 't') { g.beginPath(); f.p.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y));
+      g.strokeStyle = f.k === 't' ? '#a08a5a' : '#8b8e92'; g.lineWidth = f.k === 't' ? 8 : f.k === 'R' ? 20 : 15; g.stroke();
+      if (f.k !== 't') { g.strokeStyle = '#5f6369'; g.lineWidth = f.k === 'R' ? 16 : 11; g.stroke(); } }
+    for (const f of F) if (f.k === 'b') {                       // bina tabanı: gölge + çatı
+      g.save(); g.translate(5, 5); g.fillStyle = 'rgba(30,34,28,.35)'; polyPath(g, f.p); g.fill(); g.restore();
+      g.fillStyle = roof; polyPath(g, f.p); g.fill(); g.strokeStyle = '#7e786c'; g.lineWidth = 2; g.stroke(); }
+  };
+}
+THEMES.tandogan = {      // Beşevler: koru ağaçları, fakülte blokları, arkada Ankara silüeti ve Anıtkabir
+  sky: ['#3f86d6', '#4b8fda', '#5a99dd', '#6ba3df', '#7daddf', '#90b6dc', '#a3bfd8', '#b5c6d2', '#c4cbcb', '#cfcdc2'],
+  haze: 'rgba(207,205,194,', out: [0x9a, 0xa0, 0x5c], ground: campusGround('#9aa05c', '#86a94e', '#d9d2c3'),
+  runoff: null
+};
+THEMES.golbasi = {       // Gölbaşı 50. Yıl: geniş bozkır, kampüs halka yolu, uzakta Mogan Gölü
+  sky: ['#3a86dc', '#4891df', '#579be1', '#68a5e3', '#7bafe3', '#8fb9e2', '#a3c2df', '#b6cad9', '#c7d0d2', '#d3d3c8'],
+  haze: 'rgba(211,211,200,', out: [0xb4, 0xa8, 0x6a], ground: campusGround('#b4a86a', '#93ad5a', '#cfd3d6'),
+  runoff: { col: '#c2b48a', dot: ['#b3a47a', '#d4c79c'], band: null, surf: 'gravel' }
+};
+
 THEMES.silverstone = {   // eski hava üssü: düz çayırlar, pist kalıntıları, mavi çizgili asfalt kaçış alanları
   sky: ['#6f8fb5', '#7c9abd', '#89a5c4', '#97b0ca', '#a5bbd0', '#b3c5d5', '#c0cfd9', '#cbd6dd', '#d5dde0', '#dde2e2'],
   haze: 'rgba(214,222,226,', out: [0x5a, 0x8f, 0x3e],
@@ -591,6 +663,32 @@ function buildPano() {
     g.fillStyle = '#2f8a5a'; g.beginPath(); g.arc(1180, HY - 13, 6, Math.PI, TAU); g.fill(); g.fillRect(1174, HY - 13, 12, 13);
     for (let x = 0; x < PW; x += 5 + (r() * 6 | 0)) { if ((x > 560 && x < 720) || (x > 750 && x < 1430)) continue; const h = 8 + r() * 10 | 0;
       g.fillStyle = '#3f6a2e'; g.fillRect(x, HY - h, 2, h); g.fillRect(x - 1, HY - h + 2, 4, h - 4); }
+  } else if (TK === 'tandogan') {
+    for (let k = 0; k < 6; k++) cloud(r() * PW, 4 + r() * 20, 24 + r() * 36, ['#ffffff', '#eef4fa']);
+    for (let x = 0; x < PW; x++) { const a = x / PW * TAU; const h = Math.round(16 + 6 * Math.sin(a * 2 + 1) + 3 * Math.sin(a * 7)); g.fillStyle = '#a89c80'; g.fillRect(x, HY - h, 1, h + 1); }   // Ankara tepeleri
+    for (let x = 0; x < PW;) { if (x > 560 && x < 720) { x = 720; continue; } const w = 5 + (r() * 9 | 0), h = 7 + (r() * 16 | 0);       // apartmanlar
+      g.fillStyle = ['#e8dcc8', '#e2c9b0', '#f1ece2', '#d8c0a8', '#cfd3d6'][r() * 5 | 0]; g.fillRect(x, HY - h, w, h + 1);
+      g.fillStyle = '#7b6a5a'; for (let yy = HY - h + 2; yy < HY - 1; yy += 3) for (let xx = x + 1; xx < x + w - 1; xx += 2) if (r() < .8) g.fillRect(xx, yy, 1, 1);
+      x += w + (r() * 2 | 0); }
+    // Anıtkabir: tepe, merdiven ve sütunlu mozole
+    g.fillStyle = '#6f8a4a'; for (let x = 960; x < 1300; x++) { const t = (x - 960) / 340, h = Math.round(14 * Math.sin(t * Math.PI) ** .6); g.fillRect(x, HY - h, 1, h + 1); }
+    const ax = 1080, ab = HY - 13;
+    g.fillStyle = '#e8dcc0'; g.fillRect(ax - 8, ab - 3, 116, 3); g.fillRect(ax, ab - 16, 100, 13);
+    g.fillStyle = '#b8a888'; for (let x = ax + 3; x < ax + 98; x += 4) g.fillRect(x, ab - 14, 1, 10);
+    g.fillStyle = '#d8ccb0'; g.fillRect(ax - 2, ab - 19, 104, 3); g.fillStyle = '#c8bca0'; g.fillRect(ax + 30, ab - 23, 40, 4);
+    // Atakule
+    g.fillStyle = '#b9bfc6'; g.fillRect(330, HY - 44, 4, 44); g.fillStyle = '#9aa2aa'; g.fillRect(322, HY - 50, 20, 6); g.fillStyle = '#d8dde2'; g.fillRect(326, HY - 54, 12, 4);
+    for (let x = 0; x < PW; x += 4 + (r() * 5 | 0)) { if (x > 560 && x < 720) continue; const h = 6 + r() * 9 | 0;                                // koru ağaçları
+      g.fillStyle = r() < .5 ? '#3f6e34' : '#4d7e3e'; g.fillRect(x, HY - h, 3, h + 1); }
+  } else if (TK === 'golbasi') {
+    for (let k = 0; k < 8; k++) cloud(r() * PW, 4 + r() * 22, 30 + r() * 50, ['#ffffff', '#eef4fa', '#e2ebf2']);
+    for (let x = 0; x < PW; x++) { const a = x / PW * TAU; const h = Math.round(20 + 8 * Math.sin(a * 2 + .3) + 4 * Math.sin(a * 5 + 1) + 2 * Math.sin(a * 13)); g.fillStyle = '#b8a476'; g.fillRect(x, HY - h, 1, h + 1); g.fillStyle = '#cbb98a'; g.fillRect(x, HY - h, 1, 1); }   // bozkır tepeleri
+    for (let x = 0; x < PW; x++) { const a = x / PW * TAU; const h = Math.round(9 + 3 * Math.sin(a * 4)); g.fillStyle = '#a99560'; g.fillRect(x, HY - h, 1, h + 1); }
+    g.fillStyle = '#4f8fbf'; g.fillRect(860, HY - 5, 560, 5); g.fillStyle = '#9cc6e0'; for (let i = 0; i < 80; i++) g.fillRect(860 + r() * 560 | 0, HY - 5 + r() * 5 | 0, 3, 1);   // Mogan Gölü
+    for (let x = 150; x < 520;) { const w = 6 + (r() * 10 | 0), h = 5 + (r() * 9 | 0); g.fillStyle = ['#e8dcc8', '#f1ece2', '#d9c7a3'][r() * 3 | 0]; g.fillRect(x, HY - h, w, h + 1); g.fillStyle = '#b55a3a'; g.fillRect(x, HY - h, w, 1); x += w + (r() * 4 | 0); }   // Gölbaşı
+    for (const x0 of [760, 1420]) { g.fillStyle = '#e6e8ea'; g.fillRect(x0, HY - 16, 70, 16); g.fillStyle = '#3d6f96'; for (let y = HY - 13; y < HY - 2; y += 4) g.fillRect(x0 + 3, y, 64, 2); }   // mühendislik binaları
+    for (let x = 0; x < PW; x += 6 + (r() * 10 | 0)) { if ((x > 560 && x < 720) || (x > 860 && x < 1420)) continue; const h = 9 + r() * 10 | 0;      // kavaklar
+      g.fillStyle = '#5f7a3a'; g.fillRect(x, HY - h, 2, h); g.fillRect(x - 1, HY - h + 2, 4, h - 4); }
   } else {   // İstanbul
     for (let k = 0; k < 6; k++) cloud(r() * PW, 8 + r() * 20, 20 + r() * 40, ['#fbe9cf', '#f4dcbc']);
     for (let x = 0; x < PW; x++) { const a = x / PW * TAU; const h = Math.round(13 + 5 * Math.sin(a * 3) + 3 * Math.sin(a * 7 + 1));
@@ -611,7 +709,7 @@ function buildPano() {
       g.fillStyle = '#4c6a3a'; g.fillRect(x, HY - h, 2, h); g.fillRect(x - 1, HY - h + 2, 4, h - 4); }
   }
   g.imageSmoothingEnabled = true; g.drawImage(workshop, 640 - 72, HY - 72, 144, 75); g.imageSmoothingEnabled = false;
-  if (!TH.walls && TK !== 'monza' && TK !== 'silverstone' && TK !== 'podyum') for (let x = 0; x < PW; x += 5 + (r() * 6 | 0)) { if (x > 560 && x < 720) continue; if (TK === 'istanbul' && x > 860 && x < 1400) continue;
+  if (!TH.walls && !['monza', 'silverstone', 'podyum', 'tandogan', 'golbasi'].includes(TK)) for (let x = 0; x < PW; x += 5 + (r() * 6 | 0)) { if (x > 560 && x < 720) continue; if (TK === 'istanbul' && x > 860 && x < 1400) continue;
     const h = 6 + r() * (TK === 'spa' ? 16 : 10) | 0, w = Math.ceil(h * 0.3);
     for (let y = 0; y < h; y++) { const ww = Math.round(y / h * w); g.fillStyle = TK === 'spa' ? '#173f27' : '#3d5a2e'; g.fillRect(x - ww, HY - h + y + 1, ww * 2 + 1, 1); } }
   pano = c;
@@ -622,7 +720,25 @@ function buildObjects() {
   const r = rng(21 + TK.length * 13);
   const farFromTrack = (x, y, m) => { for (let i = 0; i < NS; i += 3) { const d = sq(x - SX[i]) + sq(y - SY[i]); const lim = TW / 2 + m + (GRAV[i] && TH.runoff ? 46 : 0); if (d < lim * lim) return false; } return true; };
   const awayFromBuildings = (x, y) => Math.hypot(x - WS.x, y - WS.y) > 110 && Math.hypot(x - STAND.x, y - STAND.y) > 70;
-  if (TH.walls) {
+  if (TRACKS[TK].campus) {
+    const F = featsOf(TK);
+    for (const f of F) {
+      if (f.k === 'b') {                                   // gerçek bina konumları
+        let cx = 0, cy = 0, x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const [x, y] of f.p) { cx += x; cy += y; x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+        cx /= f.p.length; cy /= f.p.length; const sz = Math.min(x1 - x0, y1 - y0), ww = clamp(Math.max(x1 - x0, y1 - y0) * .55, 26, 64);
+        if (cx < 30 || cy < 30 || cx > TS - 30 || cy > TS - 30 || !farFromTrack(cx, cy, Math.max(10, sz * .4)) || !awayFromBuildings(cx, cy)) continue;
+        addObj({ x: cx, y: cy, img: CAMPUS_BLD[(Math.abs(cx * 7 + cy * 3) | 0) % CAMPUS_BLD.length], ww, r: clamp(sz * .35, 8, 22) });
+      } else if (f.k === 'f' || f.k === 'g') {            // ormanlık alan ve bahçelere ağaç
+        let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const [x, y] of f.p) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+        const n = Math.min(60, (x1 - x0) * (y1 - y0) / (f.k === 'f' ? 2600 : 7000));
+        for (let i = 0, t = 0; i < n && t < n * 6; t++) { const x = x0 + r() * (x1 - x0), y = y0 + r() * (y1 - y0);
+          if (x < 30 || y < 30 || x > TS - 30 || y > TS - 30 || !inPoly(x, y, f.p) || !farFromTrack(x, y, 18) || !awayFromBuildings(x, y)) continue;
+          const k = r(); addObj(k < .4 ? { x, y, img: imgPoplar, ww: 16, r: 3 } : k < .75 ? { x, y, img: imgPine2, ww: 22, r: 4 } : { x, y, img: imgCypress, ww: 12, r: 3 }); i++; }
+      }
+    }
+    for (let t = 0; t < 900 && objs.length < 420; t++) { const x = 60 + r() * (TS - 120), y = 60 + r() * (TS - 120);   // kampüs dışı seyrek ağaçlar
+      if (!farFromTrack(x, y, 40) || !awayFromBuildings(x, y) || r() < .6) continue; addObj(r() < .5 ? { x, y, img: imgPoplar, ww: 16, r: 3 } : { x, y, img: imgAutumn, ww: 24, r: 4 }); }
+  } else if (TH.walls) {
     const palm = TK === 'baku' ? 0.3 : 0.22;
     for (let i = 0; i < NS; i += 6) for (const side of [-1, 1]) {
       const d = TW / 2 + 28 + r() * 10, x = SX[i] + RNX(i) * side * d, y = SY[i] + RNY(i) * side * d;
@@ -669,7 +785,7 @@ function buildObjects() {
 function placeRaceItems(cfg, seed) {
   boxes.length = 0; obst.length = 0; haz.length = 0;
   for (const p of pickups) p.tk.clear();
-  const rows = [0, 5, 9][cfg.items | 0] || 0;
+  const rows = (cfg.itemSet && !cfg.itemSet.length) ? 0 : [0, 5, 9][cfg.items | 0] || 0;
   const rowIdx = [];
   for (let k = 0; k < rows; k++) {
     const i = Math.floor((k + 0.7) * NS / rows) % NS; rowIdx.push(i);
@@ -721,7 +837,8 @@ const speedF = c => c.kind === 'remote' ? c.vf : c.vx * Math.cos(c.a) + c.vy * M
 function stepCar(c, inp, dt) {
   const st = c.stats, fx = Math.cos(c.a), fy = Math.sin(c.a), rxv = -fy, ryv = fx;
   let vf = c.vx * fx + c.vy * fy, vl = c.vx * rxv + c.vy * ryv;
-  const sf = SURF[c.surf] || SURF.road;
+  // patpat: kum, çim ve kaçış alanında yavaşlamaz (pistten çok uzaklaşırsa normal çim gibi davranır, kestirme olmasın)
+  const sf = (c.def.offroad && c.surf !== 'wall' && (c.latD || 0) < TW / 2 + 90) ? SURF.road : SURF[c.surf] || SURF.road;
   let top = st.top * sf.top, acc = st.acc;
   const tb = c.def.tb || TB_DEF;
   if (c.turboOn) { top *= tb[0]; acc *= tb[1]; }
@@ -772,6 +889,7 @@ function trackUpdate(c, laps) {
       if (c === me && vn > 40 && c.hitT <= 0) { shake = 0.25; sfx('bump'); c.hitT = 0.3; for (let k = 0; k < 4; k++) particles.push({ x: c.x + nx * 4, y: c.y + ny * 4, life: 0.35, max: 0.35, col: '#ffd84a' }); } }
     lat = s * lim; d = lim;
   }
+  c.latD = d;
   c.surf = d < TW / 2 ? 'road' : d < TW / 2 + 5 ? 'curb'
     : TH.walls ? 'wall'
     : (TH.runoff && GRAV[c.idx] && Math.sign(lat) === -Math.sign(KV[c.idx]) && d < TW / 2 + 44) ? TH.runoff.surf : 'grass';
@@ -819,7 +937,7 @@ function collide(list) {
     const solids = [];
     const gx = c.x / GC | 0, gy = c.y / GC | 0;
     for (let ox = -1; ox <= 1; ox++) for (let oy = -1; oy <= 1; oy++) { const l = grid.get((gx + ox) + ',' + (gy + oy)); if (l) solids.push(...l); }
-    for (const o of obst) if (o.k === 'barrel' && Math.abs(o.x - c.x) < 20 && Math.abs(o.y - c.y) < 20) solids.push(o);
+    if (!c.def.tank) for (const o of obst) if (o.k === 'barrel' && Math.abs(o.x - c.x) < 20 && Math.abs(o.y - c.y) < 20) solids.push(o);
     for (const o of solids) { const dx = c.x - o.x, dy = c.y - o.y, d = Math.hypot(dx, dy), m = o.r + 4;
       if (d < m && d > 0) { c.x = o.x + dx / d * m; c.y = o.y + dy / d * m; const vn = c.vx * dx / d + c.vy * dy / d;
         if (vn < 0) { c.vx -= dx / d * vn * 1.4; c.vy -= dy / d * vn * 1.4; const k = c.shieldT > 0 ? 0.85 : 0.55; c.vx *= k; c.vy *= k;
@@ -838,14 +956,14 @@ let countT = 0, raceT = 0, finishT = 0, finishOrder = 0, graceEnd = 0, lastLight
 let camA = 0, camX = 0, camY = 0, shake = 0, gT = 0, msg = '', msgT = 0, msgCol = '#ffd84a', zapFlash = 0, hazSeq = 0;
 const particles = [], feed = [];
 let myId = 0, room = null, board = { tracks: {} }, sendT = 0;
-const CFG_DEF = { track: 'istanbul', laps: 3, items: 1, obst: 1, catchup: 1, collide: 1 };
+const CFG_DEF = { track: 'istanbul', laps: 3, items: 1, obst: 1, catchup: 1, collide: 1, cars: CARS.map(c => c.key), itemSet: ITEM_KEYS.slice() };
 let pcfg = Object.assign({}, CFG_DEF, store.get('hgp-pcfg', {}));
 let race = Object.assign({ seed: 1 }, CFG_DEF);
 
 function flash(t, col = '#ffd84a') { msg = t; msgT = 2.2; msgCol = col; }
 function pushFeed(t, col = '#e6eef5') { feed.push({ t, col, life: 5 }); if (feed.length > 4) feed.shift(); }
 function playerName() { return ($('name').value || '').trim().slice(0, 14); }
-const pickTrack = k => k === 'random' ? TRACK_KEYS[Math.random() * TRACK_KEYS.length | 0] : (TRACKS[k] ? k : 'istanbul');
+const pickTrack = k => k === 'random' ? COMP_TRACKS[Math.random() * COMP_TRACKS.length | 0] : (TRACKS[k] ? k : 'istanbul');
 
 function startPractice() {
   initAudio(); mode = 'practice';
@@ -907,7 +1025,9 @@ function rollItem(c) {
   const w = race.catchup ? { turbo: 40 - 25 * f, super: 4 + 36 * f, oil: 28 - 22 * f, shield: 14, zap: f > 0.25 ? 26 * f : 0 }
                          : { turbo: 32, super: 10, oil: 24, shield: 16, zap: 10 };
   if (n < 2) w.zap = 0;
+  const allow = race.itemSet || ITEM_KEYS; for (const k in w) if (!allow.includes(k)) w[k] = 0;
   let sum = 0; for (const k in w) sum += w[k];
+  if (sum <= 0) return null;
   let x = Math.random() * sum;
   for (const k in w) { x -= w[k]; if (x <= 0) return k; }
   return 'turbo';
@@ -954,17 +1074,23 @@ function interact(c, now) {
     if (b.tk.get(c) > now || sq(c.x - b.x) + sq(c.y - b.y) > 64) continue;
     b.tk.set(c, now + 2200);
     for (let k = 0; k < 6; k++) particles.push({ x: b.x, y: b.y, life: 0.4, max: 0.4, col: k % 2 ? '#79c8f2' : '#ffffff' });
-    if (!c.item) { c.item = rollItem(c); c.itemT = 1 + Math.random() * 3; if (c === me) { sfx('box'); flash('EŞYA: ' + ITEM_NAMES[c.item], '#ffffff'); } }
+    if (!c.item) { c.item = rollItem(c); c.itemT = 1 + Math.random() * 3; if (c === me && c.item) { sfx('box'); flash('EŞYA: ' + ITEM_NAMES[c.item], '#ffffff'); } }
   }
   for (const o of obst) {
     const d2 = sq(c.x - o.x) + sq(c.y - o.y);
     if (o.k === 'cone') {
       if (d2 > 36 || o.tk.get(c) > now) continue;
       o.tk.set(c, now + 12000);
-      if (c.shieldT <= 0) { c.vx *= 0.6; c.vy *= 0.6; }
+      if (c.shieldT <= 0 && !c.def.tank) { c.vx *= 0.6; c.vy *= 0.6; }
       for (let k = 0; k < 5; k++) particles.push({ x: o.x, y: o.y, life: 0.5, max: 0.5, col: k % 2 ? '#ff7a1a' : '#ffffff' });
       if (c === me) { shake = 0.2; sfx('bump'); }
+    } else if (o.k === 'barrel' && c.def.tank) {      // patpat varili ezer
+      if (d2 > 60 || (o.tk && o.tk.get(c) > now)) continue;
+      (o.tk = o.tk || new Map()).set(c, now + 12000);
+      for (let k = 0; k < 8; k++) particles.push({ x: o.x + (Math.random() - .5) * 6, y: o.y + (Math.random() - .5) * 6, life: 0.6, max: 0.6, col: k % 2 ? '#d8322a' : '#f4f4f4' });
+      if (c === me) { shake = 0.15; sfx('bump'); }
     } else if (o.k === 'oil') {
+      if (c.def.tank) continue;                        // yağdan etkilenmez
       if (d2 > 40 || (c.oilT || 0) > now) continue;
       c.oilT = now + 1500; spinOut(c);
     }
@@ -973,6 +1099,7 @@ function interact(c, now) {
     const h = haz[i];
     if (sq(c.x - h.x) + sq(c.y - h.y) > 49) continue;
     if ((h.owner === c || (c.id && h.owner === c.id)) && now - h.t0 < 2000) continue;
+    if (c.def.tank) continue;
     spinOut(c); haz.splice(i, 1);
     if (mode === 'online' && c === me) send({ type: 'hazHit', id: h.id });
   }
@@ -1006,7 +1133,7 @@ function update(dt) {
   for (const f of feed) f.life -= dt; while (feed.length && feed[0].life <= 0) feed.shift();
   zapFlash = Math.max(0, zapFlash - dt);
   if (state === 'boot') return;
-  if (state === 'menu' || state === 'room') { updateAttract(dt, now); updateEngine(); return; }
+  if (state === 'menu' || state === 'room' || state === 'pick') { updateAttract(dt, now); updateEngine(); return; }
   if (state === 'paused') return;
   if (state === 'count') {
     countT += dt; const L = Math.min(5, Math.floor(countT / 0.62));
@@ -1162,7 +1289,7 @@ function drawWorld(list, target) {
   for (const o of objs) { const p = proj(o.x, o.y); if (!p || p.depth > 1500) continue; const w = o.ww * p.k; if (p.sx + w < -20 || p.sx - w > W + 20) continue; items.push({ p, o, t: 0 }); }
   for (const pk of pickups) if (!(pk.tk.get(viewer) > now)) add(pk.x, pk.y, 1, pk, 700);
   for (const b of boxes) if (!(b.tk.get(viewer) > now)) add(b.x, b.y, 5, b, 800);
-  for (const o of obst) if (!(o.k === 'cone' && o.tk.get(viewer) > now)) add(o.x, o.y, 6, o, 800);
+  for (const o of obst) if (!((o.k === 'cone' || o.k === 'barrel') && o.tk && o.tk.get(viewer) > now)) add(o.x, o.y, 6, o, 800);
   for (const h of haz) add(h.x, h.y, 7, h, 700);
   for (const pa of particles) add(pa.x, pa.y, 2, pa, 500);
   for (const c of list) { if (c === target) continue; add(c.x, c.y, 3, c, 1200); }
@@ -1230,7 +1357,8 @@ function drawRain() {
   ctx.stroke();
 }
 function panel(x, y, w, h) { ctx.fillStyle = 'rgba(6,18,30,.88)'; ctx.fillRect(x, y, w, h); ctx.fillStyle = '#2a94d8'; ctx.fillRect(x, y, w, 2); ctx.fillRect(x, y + h - 2, w, 2); }
-const boardFor = (tk) => (board.tracks && board.tracks[tk]) || { laps: [], races: [] };
+const boardOf = (kind, tk) => ((kind === 'comp' ? board.comp && board.comp.tracks : board.tracks) || {})[tk] || { laps: [], races: [] };
+const boardFor = tk => boardOf(lbMode, tk);
 function hud() {
   logoBadge(ctx, 4, 4);
   if (state === 'results') { drawResults(); return; }
@@ -1246,7 +1374,7 @@ function hud() {
   txt(fmt(state === 'count' ? 0 : raceT), W / 2, 16, '#ffd84a', 8, 'center');
   const kmh = Math.round(Math.abs(speedF(me)) * 0.22);
   txt(String(kmh), W - 46, 6, '#ffffff', 16, 'right'); txt('KM/H', W - 6, 14, '#9ecbef', 8, 'right');
-  const recL = boardFor(race.track).laps[0];
+  const recL = mode === 'online' ? boardOf(race.kind, race.track).laps[0] : null;
   const rec = mode === 'online' ? (recL && recL.time) : me.bestStored;
   txt('REKOR ' + (rec ? fmt(rec) : '--:--.-'), W - 6, 28, '#c3ccd4', 8, 'right');
   if (me.bestLap) txt('SENİN ' + fmt(me.bestLap), W - 6, 38, '#9ecbef', 8, 'right');
@@ -1344,7 +1472,7 @@ function render() {
   if (state === 'boot') { ctx.fillStyle = '#0a1f33'; ctx.fillRect(0, 0, W, H); txt('YÜKLENİYOR…', W / 2, H / 2 - 4, '#e6eef5', 8, 'center'); return; }
   ctx.save();
   if (shake > 0 && !reduced) ctx.translate(Math.round((Math.random() - .5) * 4), Math.round((Math.random() - .5) * 3));
-  if (state === 'menu' || state === 'room') {
+  if (state === 'menu' || state === 'room' || state === 'pick') {
     const list = spec.size ? [...spec.values()] : [demo];
     let target = demo; if (spec.size) target = list.reduce((a, b) => progOf(b) > progOf(a) ? b : a);
     drawWorld(list, target); if (TH.rain && !reduced) drawRain(); ctx.restore(); drawAttractHUD(); return;
@@ -1359,8 +1487,8 @@ function render() {
    LOBİ ARAYÜZÜ
    ========================================================= */
 const pickers = [];
-function buildPicker(el) {
-  const btns = CARS.map(c => {
+function buildPicker(el, keys) {
+  const btns = CARS.filter(c => !keys || keys.includes(c.key)).map(c => {
     const b = document.createElement('button'); b.type = 'button'; b.className = 'carbtn'; b.dataset.car = c.key;
     const cc = document.createElement('canvas'); cc.width = 96; cc.height = 48;
     const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = c.name;
@@ -1368,14 +1496,19 @@ function buildPicker(el) {
     b.append(cc, nm, tr);
     b.addEventListener('click', () => chooseCar(c.key));
     el.appendChild(b);
-    return { b, cc, g: cc.getContext('2d'), key: c.key, yaw: -Math.PI / 2 + .7 };
+    return { b, cc, g: cc.getContext('2d'), key: c.key, yaw: -Math.PI / 2 + .7, el };
   });
   pickers.push(...btns);
 }
+function allowPicker(el, keys) { for (const p of pickers) if (p.el === el) p.b.hidden = !keys.includes(p.key); }
 function chooseCar(key) {
   if (!CARK[key]) return;
+  if (room && (state === 'room' || state === 'pick')) {
+    const allow = room.kind === 'comp' ? COMP_CARS : (room.cfg && room.cfg.cars) || CFG_DEF.cars;
+    if (!allow.includes(key)) return;
+    send({ type: 'car', car: key });
+  }
   selCar = key; store.set('hgp-car', key); sfx('beep');
-  if (room && state === 'room') send({ type: 'car', car: key });
   syncPickers();
 }
 function syncPickers() { for (const p of pickers) { p.b.setAttribute('aria-pressed', String(p.key === selCar)); drawPreview(p, true); } }
@@ -1390,19 +1523,21 @@ function drawPreview(p, force) {
 }
 function showScreen(which) {
   $('scrEntry').hidden = which !== 'entry';
+  $('scrOnline').hidden = which !== 'online';
+  $('scrPick').hidden = which !== 'pick';
   $('scrRoom').hidden = which !== 'room';
   $('scrPractice').hidden = which !== 'practice';
   $('overlay').hidden = !which;
 }
 /* ---- yarış ayarları paneli ---- */
 const THUMBS = {};
-function cfgUI(el, onChange) {
+function cfgUI(el, onChange, opt = {}) {
   el.textContent = '';
   let cur = Object.assign({}, CFG_DEF), editable = true;
   const mkEl = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   const row = label => { const r = mkEl('div', 'cfgrow'); r.append(mkEl('span', 'cl', label)); el.append(r); return r; };
   const tr = row('PİST'), tg = mkEl('div', 'tracks'); tr.append(tg);
-  const tbtn = [...TRACK_KEYS, 'random'].map(k => {
+  const tbtn = [...(opt.tracks || TRACK_KEYS), 'random'].map(k => {
     const b = mkEl('button', 'trk'); b.type = 'button';
     const c = document.createElement('canvas'); c.width = 64; c.height = 40;
     if (k === 'random') { const g = c.getContext('2d'); g.fillStyle = '#e6eef5'; g.font = '20px "Press Start 2P", monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('?', 32, 22); }
@@ -1421,7 +1556,22 @@ function cfgUI(el, onChange) {
   };
   const syncs = [seg('EŞYA KUTULARI', 'items', ['KAPALI', 'NORMAL', 'BOL']), seg('ENGELLER', 'obst', ['YOK', 'AZ', 'NORMAL', 'ÇOK']),
     seg('YAKALAMA BONUSU', 'catchup', ['KAPALI', 'AÇIK']), seg('ARAÇ ÇARPIŞMASI', 'collide', ['KAPALI', 'AÇIK'])];
-  el.append(mkEl('p', 'note', 'Yakalama bonusu açıkken geride kalan daha güçlü eşya alır (süper turbo, şimşek).'));
+  // serbest oda: hangi araçlar ve hangi güçler çıkabilir
+  const chipRow = (label, key, items, nameOf) => {
+    const r = row(label), box = mkEl('div', 'chips'); r.append(box);
+    const bs = items.map(k => { const b = mkEl('button', 'chip', nameOf(k)); b.type = 'button';
+      b.onclick = () => { if (!editable) return; const on = cur[key].includes(k);
+        const next = on ? cur[key].filter(x => x !== k) : items.filter(x => x === k || cur[key].includes(x));
+        if (key === 'cars' && !next.length) return;   // en az bir araç kalmalı
+        onChange({ [key]: next }); };
+      box.append(b); return [k, b]; });
+    return () => bs.forEach(([k, b]) => { b.setAttribute('aria-pressed', String(cur[key].includes(k))); b.disabled = !editable; });
+  };
+  if (opt.choose) {
+    syncs.push(chipRow('SEÇİLEBİLEN ARAÇLAR', 'cars', CARS.map(c => c.key), k => cname(CARK[k])));
+    syncs.push(chipRow('ÇIKABİLECEK GÜÇLER', 'itemSet', ITEM_KEYS, k => ITEM_NAMES[k]));
+  }
+  el.append(mkEl('p', 'note', 'Yakalama bonusu açıkken geride kalan daha güçlü eşya alır (süper turbo, şimşek).' + (opt.choose ? ' Kapattığın araçlar bu odada seçilemez, kapattığın güçler eşya kutularından çıkmaz.' : '')));
   return {
     set(cfg, ed) {
       cur = Object.assign({}, CFG_DEF, cfg); editable = ed;
@@ -1432,6 +1582,19 @@ function cfgUI(el, onChange) {
   };
 }
 let cfgRoomUI, cfgPracUI;
+let pickEnd = 0;
+function renderPick() {
+  if (!room || room.kind !== 'comp') return;
+  const ul = $('pickList'); ul.textContent = '';
+  for (const p of room.players) {
+    const li = document.createElement('li');
+    const sw = document.createElement('span'); sw.className = 'sw'; sw.style.background = p.picked ? (CARK[p.car] || CARS[0]).col : '#33475a';
+    const pn = document.createElement('span'); pn.className = 'pn'; pn.textContent = p.name + (p.picked ? ' · ' + cname(CARK[p.car] || CARS[0]) : '');
+    const t = document.createElement('span'); t.className = 'tag ' + (p.picked ? 'ok' : 'wait'); t.textContent = p.picked ? 'SEÇTİ' : 'SEÇİYOR';
+    li.append(sw, pn, t); if (p.id === myId) { const y = document.createElement('span'); y.className = 'tag you'; y.textContent = 'SEN'; li.append(y); }
+    ul.append(li);
+  }
+}
 function renderRoom() {
   if (!room) return;
   $('roomCode').textContent = room.code;
@@ -1443,19 +1606,31 @@ function renderRoom() {
     li.append(sw, pn);
     if (p.id === room.host) { const t = document.createElement('span'); t.className = 'tag'; t.textContent = 'SAHİP'; li.append(t); }
     if (p.id === myId) { const t = document.createElement('span'); t.className = 'tag you'; t.textContent = 'SEN'; li.append(t); }
+    if (room.kind === 'comp') { pn.textContent = p.name; const t = document.createElement('span'); t.className = 'tag ' + (p.ready ? 'ok' : 'wait'); t.textContent = p.ready ? 'HAZIR' : 'BEKLİYOR'; li.append(t); if (p.id === room.host) li.querySelector('.tag').remove(); }
     ul.append(li);
   }
   $('pcount').textContent = '(' + room.players.length + '/8)';
-  const host = room.players.find(p => p.id === room.host), isHost = room.host === myId;
-  const live = room.phase !== 'lobby';
-  $('btnStart').hidden = !isHost; $('btnStart').disabled = live;
-  if (cfgRoomUI) cfgRoomUI.set(room.cfg || CFG_DEF, isHost && !live);
+  const host = room.players.find(p => p.id === room.host), isHost = room.host === myId, comp = room.kind === 'comp';
+  const live = room.phase !== 'lobby', mine = room.players.find(p => p.id === myId);
+  $('roomMode').textContent = comp ? 'REKABETÇİ' : 'SERBEST'; $('roomMode').className = 'mbadge ' + (comp ? 'comp' : 'free');
+  $('compBox').hidden = !comp; $('freeBox').hidden = comp;
+  $('btnStart').hidden = comp || !isHost; $('btnStart').disabled = live;
+  $('btnReady').hidden = !comp; $('btnReady').disabled = live;
+  $('btnReady').textContent = mine && mine.ready ? 'HAZIR DEĞİLİM' : 'HAZIRIM';
+  if (!comp) {
+    if (cfgRoomUI) cfgRoomUI.set(room.cfg || CFG_DEF, isHost && !live);
+    allowPicker($('carsRoom'), (room.cfg && room.cfg.cars) || CFG_DEF.cars);
+    if (mine && mine.car !== selCar && CARK[mine.car]) { selCar = mine.car; syncPickers(); }
+  }
   $('cfgHint').textContent = isHost ? '(sen ayarlıyorsun)' : '(oda sahibi ayarlar)';
-  $('roomNote').textContent = live ? (room.phase === 'results' ? 'Sonuçlar gösteriliyor, birazdan lobiye dönülecek.' : 'Yarış sürüyor, canlı izliyorsun. Bir sonraki yarışa katılacaksın.')
+  const nReady = room.players.filter(p => p.ready).length, need = room.min || 3;
+  $('roomNote').textContent = live ? (room.phase === 'results' ? 'Sonuçlar gösteriliyor, birazdan lobiye dönülecek.' : room.phase === 'pick' ? 'Araçlar seçiliyor…' : 'Yarış sürüyor, canlı izliyorsun. Bir sonraki yarışa katılacaksın.')
+    : comp ? (room.players.length < need ? 'En az ' + need + ' pilot gerekiyor (' + room.players.length + '/' + need + '). Arkadaşlarını kodla çağır.' : 'Hazır: ' + nReady + '/' + room.players.length + '. Herkes hazır olunca başlar.')
     : isHost ? (room.players.length < 2 ? 'Tek başına da başlatabilirsin; arkadaşların sonraki yarışa katılır.' : 'Herkes hazırsa başlat.') : 'Oda sahibinin (' + (host ? host.name : '…') + ') başlatması bekleniyor.';
-  if (!live && room.cfg && room.cfg.track !== 'random' && state === 'room') useTrack(room.cfg.track);
+  if (!live && !comp && room.cfg && room.cfg.track !== 'random' && state === 'room') useTrack(room.cfg.track);
+  renderPick();
 }
-let lbTab = 'laps', lbTrack = 'istanbul';
+let lbTab = 'laps', lbTrack = 'istanbul', lbMode = 'comp';
 const OBST_NAMES = ['ENGELSİZ', 'AZ', 'NORMAL', 'ÇOK'];
 function renderBoard() {
   for (const b of document.querySelectorAll('#lbTracks .tab')) b.setAttribute('aria-selected', String(b.dataset.t === lbTrack));
@@ -1473,7 +1648,16 @@ function renderBoard() {
 }
 $('tabLap').onclick = () => { lbTab = 'laps'; $('tabLap').setAttribute('aria-selected', 'true'); $('tabRace').setAttribute('aria-selected', 'false'); renderBoard(); };
 $('tabRace').onclick = () => { lbTab = 'races'; $('tabRace').setAttribute('aria-selected', 'true'); $('tabLap').setAttribute('aria-selected', 'false'); renderBoard(); };
-for (const k of TRACK_KEYS) { const b = document.createElement('button'); b.className = 'tab'; b.dataset.t = k; b.textContent = TRACKS[k].short; b.onclick = () => { lbTrack = k; renderBoard(); }; $('lbTracks').append(b); }
+function buildLbTracks() {
+  const keys = lbMode === 'comp' ? COMP_TRACKS : TRACK_KEYS; $('lbTracks').textContent = '';
+  if (!keys.includes(lbTrack)) lbTrack = keys[0];
+  for (const k of keys) { const b = document.createElement('button'); b.className = 'tab'; b.dataset.t = k; b.textContent = TRACKS[k].short; b.onclick = () => { lbTrack = k; renderBoard(); }; $('lbTracks').append(b); }
+  $('tabRace').textContent = lbMode === 'comp' ? '5 TUR YARIŞ' : '3 TUR YARIŞ';
+  $('lbComp').setAttribute('aria-selected', String(lbMode === 'comp')); $('lbFree').setAttribute('aria-selected', String(lbMode === 'free'));
+}
+$('lbComp').onclick = () => { lbMode = 'comp'; buildLbTracks(); renderBoard(); };
+$('lbFree').onclick = () => { lbMode = 'free'; buildLbTracks(); renderBoard(); };
+buildLbTracks();
 
 function needName(errEl) {
   const n = playerName();
@@ -1484,12 +1668,27 @@ function needNet(errEl) {
   if (!net.ok) { errEl.textContent = location.protocol === 'file:' ? 'Dosya olarak açtın, online oynamak için sunucu adresinden gir. Antrenman çalışır.' : 'Sunucuya bağlı değilsin. Birkaç saniye bekle ya da antrenman yap.'; return false; }
   return true;
 }
-$('btnQuick').onclick = () => { initAudio(); const e = $('entryErr'); e.textContent = ''; const n = needName(e); if (!n || !needNet(e)) return; send({ type: 'quick', name: n, car: selCar }); };
-$('btnCreate').onclick = () => { initAudio(); const e = $('entryErr'); e.textContent = ''; const n = needName(e); if (!n || !needNet(e)) return; send({ type: 'create', name: n, car: selCar }); };
-$('btnJoin').onclick = () => { initAudio(); const e = $('entryErr'); e.textContent = ''; const n = needName(e); if (!n || !needNet(e)) return;
+// giriş: üç mod
+let onlineKind = 'comp';
+const MODE_TXT = {
+  comp: ['REKABETÇİ', 'Kurallar herkes için aynı: 5 tur, engeller az, eşyalar normal, çarpışma açık, yakalama bonusu kapalı. Pist rastgele gelir, araçlar sadece Tur-AZ, Pars, Ucube ve Helianthus. En az 3 pilot gerekir; dereceler rekabetçi skor tablosuna yazılır.'],
+  free: ['SERBEST', 'Oda sahibi her şeyi seçer: pist (kampüs pistleri dahil), tur sayısı, engeller, hangi araçların ve hangi güçlerin olacağı. Hidroket-1, Halis\'in scooterı ve Hasan Furkan\'ın patpatı sadece burada. Dereceler serbest skor tablosuna yazılır.']
+};
+function openOnline(kind) {
+  const e = $('entryErr'); e.textContent = ''; if (!needName(e)) return;
+  onlineKind = kind; $('onlineTitle').textContent = MODE_TXT[kind][0]; $('onlineDesc').textContent = MODE_TXT[kind][1]; $('onlineErr').textContent = '';
+  showScreen('online');
+}
+$('btnModeComp').onclick = () => { initAudio(); openOnline('comp'); };
+$('btnModeFree').onclick = () => { initAudio(); openOnline('free'); };
+$('btnOBack').onclick = () => showScreen('entry');
+$('btnQuick').onclick = () => { initAudio(); const e = $('onlineErr'); e.textContent = ''; const n = needName(e); if (!n || !needNet(e)) return; send({ type: 'quick', kind: onlineKind, name: n, car: selCar }); };
+$('btnCreate').onclick = () => { initAudio(); const e = $('onlineErr'); e.textContent = ''; const n = needName(e); if (!n || !needNet(e)) return; send({ type: 'create', kind: onlineKind, name: n, car: selCar }); };
+$('btnJoin').onclick = () => { initAudio(); const e = $('onlineErr'); e.textContent = ''; const n = needName(e); if (!n || !needNet(e)) return;
   const code = $('code').value.trim().toUpperCase(); if (code.length !== 4) { e.textContent = 'Oda kodu 4 harf olmalı.'; $('code').focus(); return; }
   send({ type: 'join', code, name: n, car: selCar }); };
-$('btnPractice').onclick = () => { if (state === 'boot') return; store.set('hgp-name', playerName()); showScreen('practice'); cfgPracUI.set(pcfg, true); if (pcfg.track !== 'random') useTrack(pcfg.track); };
+$('btnModePrac').onclick = () => { if (state === 'boot') return; store.set('hgp-name', playerName()); showScreen('practice'); cfgPracUI.set(pcfg, true); if (pcfg.track !== 'random') useTrack(pcfg.track); };
+$('btnReady').onclick = () => { initAudio(); const mine = room && room.players.find(p => p.id === myId); send({ type: 'ready', on: !(mine && mine.ready) }); };
 $('btnPBack').onclick = () => showScreen('entry');
 $('btnPStart').onclick = () => startPractice();
 $('btnStart').onclick = () => { initAudio(); send({ type: 'start' }); };
@@ -1499,7 +1698,7 @@ $('btnCopyLink').onclick = async () => {
   try { await navigator.clipboard.writeText(link); b.textContent = 'KOPYALANDI'; } catch (e) { $('shareNote').textContent = link; b.textContent = 'LİNK AŞAĞIDA'; }
   setTimeout(() => b.textContent = 'LİNKİ KOPYALA', 1600);
 };
-$('name').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('btnQuick').click(); } });
+$('name').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('btnModeComp').click(); } });
 $('name').addEventListener('input', () => { $('entryErr').textContent = ''; renderBoard(); });
 $('code').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('btnJoin').click(); } });
 $('code').addEventListener('input', () => { $('code').value = $('code').value.toUpperCase().replace(/[^A-ZÇĞİÖŞÜ]/g, '').slice(0, 4); });
@@ -1529,20 +1728,29 @@ function connect() {
   };
 }
 const nameOf = id => { const c = cars.find(c => c.id === id); if (c) return c.name; const p = room && room.players.find(p => p.id === id); return p ? p.name : '?'; };
+// rekabetçi: pist belli oldu, 15 sn araç seçimi
+function enterPick(track, ms) {
+  state = 'pick'; pickEnd = performance.now() + (ms || 15000);
+  if (TRACKS[track]) { useTrack(track); $('pickTrack').textContent = 'PİST: ' + TRACKS[track].name; }
+  if (!COMP_CARS.includes(selCar)) selCar = COMP_CARS[0];
+  syncPickers(); renderPick(); showScreen('pick'); sfx('lap');
+}
 function onMsg(m) {
   const now = performance.now();
   switch (m.type) {
     case 'welcome': myId = m.id; if (m.board) { board = m.board; renderBoard(); }
-      if (params.get('oda') && !room) $('code').value = params.get('oda').toUpperCase().slice(0, 4);
+      if (params.get('oda') && !room) { $('code').value = params.get('oda').toUpperCase().slice(0, 4); if (state === 'menu' && playerName()) { onlineKind = 'free'; showScreen('online'); $('onlineTitle').textContent = 'ODAYA KATIL'; $('onlineDesc').textContent = 'Linkle geldin. Kod hazır, KATIL\'a bas.'; } }
       break;
     case 'joined': mode = 'online'; state = 'room'; showScreen('room'); $('roomErr').textContent = '';
       try { history.replaceState(null, '', location.pathname + '?oda=' + m.code); } catch (e) {}
       break;
     case 'room': room = m; renderRoom();
-      if (m.phase === 'lobby' && (state === 'results' || state === 'finish' || state === 'race' || state === 'count')) { cars = []; me = null; graceEnd = 0; state = 'room'; showScreen('room'); renderRoom(); }
+      if (m.phase === 'lobby' && (state === 'results' || state === 'finish' || state === 'race' || state === 'count' || state === 'pick')) { cars = []; me = null; graceEnd = 0; state = 'room'; showScreen('room'); renderRoom(); }
+      if (m.phase === 'pick' && state === 'room') enterPick(m.track, m.pickLeft);
       break;
+    case 'pick': if (room) enterPick(m.track, m.ms); break;
     case 'leftRoom': room = null; mode = null; spec.clear(); state = 'menu'; showScreen('entry'); try { history.replaceState(null, '', location.pathname); } catch (e) {} break;
-    case 'error': ($('scrRoom').hidden ? $('entryErr') : $('roomErr')).textContent = m.msg; break;
+    case 'error': (!$('scrRoom').hidden ? $('roomErr') : !$('scrOnline').hidden ? $('onlineErr') : $('entryErr')).textContent = m.msg; break;
     case 'count':
       race = Object.assign({}, CFG_DEF, m.cfg || {}, { seed: m.seed | 0 });
       useTrack(race.track);
@@ -1555,7 +1763,7 @@ function onMsg(m) {
         const rest = d.slice(1);
         if (state === 'count' || state === 'race' || state === 'finish' || state === 'results') {
           const c = cars.find(c => c.id === id); if (c) { pushRemote(c, rest, now); c.finished = !!rest[9] || c.finished; }
-        } else if (state === 'menu' || state === 'room') {
+        } else if (state === 'menu' || state === 'room' || state === 'pick') {
           let c = spec.get(id);
           if (!c) { const info = room && room.players.find(p => p.id === id); c = makeCar(CARK[info ? info.car : 'turaz'] || CARS[0], 0, 'remote'); c.id = id; c.name = info ? info.name : '?'; spec.set(id, c); }
           pushRemote(c, rest, now);
@@ -1609,7 +1817,8 @@ const keys = {};
 let lastInput = { steer: 0, thr: 0, turbo: false };
 function confirmAction() {
   initAudio();
-  if (state === 'room' && room && room.host === myId && room.phase === 'lobby') send({ type: 'start' });
+  if (state === 'room' && room && room.kind === 'comp' && room.phase === 'lobby') $('btnReady').click();
+  else if (state === 'room' && room && room.host === myId && room.phase === 'lobby') send({ type: 'start' });
   else if (state === 'results' && mode === 'practice' && resT < POD[0].at + 1) resT = POD[0].at + 1;   // ilk basış: podyumu hemen göster
   else if (state === 'results' && mode === 'practice') { mode = null; cars = []; me = null; state = 'menu'; showScreen('entry'); }
   else if (state === 'paused') state = prevState;
@@ -1637,7 +1846,7 @@ addEventListener('keydown', e => {
     if ((k === 'e' || k === 'x' || k === 'q') && me && inGame) useItem(me);
     if ((k === ' ' || k === 'shift') && turboLatch && state === 'race') latched = !latched;
     if (k === 'm') nextSong();
-    if ((state === 'menu' || state === 'room') && (k === 'arrowleft' || k === 'arrowright')) {
+    if ((state === 'menu' || state === 'room' || state === 'pick') && (k === 'arrowleft' || k === 'arrowright')) {
       const i = CARS.findIndex(c => c.key === selCar); chooseCar(CARS[(i + (k === 'arrowright' ? 1 : CARS.length - 1)) % CARS.length].key);
     }
   }
@@ -1683,7 +1892,7 @@ function readInput() {
 }
 let navLatch = false;
 function joyMenuNav() {
-  if (!joy.ok || (state !== 'menu' && state !== 'room')) { navLatch = false; return; }
+  if (!joy.ok || (state !== 'menu' && state !== 'room' && state !== 'pick')) { navLatch = false; return; }
   if (!navLatch && Math.abs(joy.x) > 0.6) { const i = CARS.findIndex(c => c.key === selCar); chooseCar(CARS[(i + (joy.x > 0 ? 1 : CARS.length - 1)) % CARS.length].key); navLatch = true; }
   if (Math.abs(joy.x) < 0.3) navLatch = false;
 }
@@ -1809,11 +2018,34 @@ function sfx(type) {
   g.gain.setValueAtTime(0.06, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
   o.connect(g).connect(ac.destination); o.start(t); o.stop(t + dur + 0.02);
 }
+// patpat: tek silindirli dizel; her ateşlemede boğuk bir "pat" (düşen sinüs + filtreli gürültü + tıkırtı)
+let patNext = 0, noiseBuf = null;
+function patThump(t, loud) {
+  if (!noiseBuf) { noiseBuf = ac.createBuffer(1, ac.sampleRate * 0.2, ac.sampleRate); const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+  const o = ac.createOscillator(), g = ac.createGain(); o.type = 'sine';
+  o.frequency.setValueAtTime(95, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.07);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.22 * loud, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0008, t + 0.11);
+  o.connect(g).connect(ac.destination); o.start(t); o.stop(t + 0.13);
+  const n = ac.createBufferSource(), f = ac.createBiquadFilter(), ng = ac.createGain(); n.buffer = noiseBuf;
+  f.type = 'lowpass'; f.frequency.value = 520 + 400 * loud; ng.gain.setValueAtTime(0.16 * loud, t); ng.gain.exponentialRampToValueAtTime(0.0008, t + 0.06);
+  n.connect(f).connect(ng).connect(ac.destination); n.start(t, Math.random() * 0.1); n.stop(t + 0.07);
+  const k = ac.createBufferSource(), kf = ac.createBiquadFilter(), kg = ac.createGain(); k.buffer = noiseBuf;
+  kf.type = 'highpass'; kf.frequency.value = 2800; kg.gain.setValueAtTime(0.03, t + 0.02); kg.gain.exponentialRampToValueAtTime(0.0005, t + 0.035);
+  k.connect(kf).connect(kg).connect(ac.destination); k.start(t + 0.02, Math.random() * 0.1); k.stop(t + 0.04);
+}
 function updateEngine() {
   if (!ac) return;
-  const c = (state === 'menu' || state === 'room') ? null : me;
+  const c = (state === 'menu' || state === 'room' || state === 'pick') ? null : me;
   const on = !muted && c && state !== 'paused' && state !== 'results';
   const r = c ? Math.abs(speedF(c)) / c.stats.top : 0;
+  if (c && c.def.key === 'patpat') {
+    engGain.gain.setTargetAtTime(0, ac.currentTime, 0.05);
+    if (!on) { patNext = 0; return; }
+    const rate = 7.5 + r * 13 + (c.turboOn ? 4 : 0), t0 = ac.currentTime;   // rölantide ~8, tam gazda ~20 pat/sn
+    if (patNext < t0) patNext = t0 + 0.02;
+    while (patNext < t0 + 0.12) { patThump(patNext, 0.65 + 0.35 * Math.min(1, r + (lastInput.thr > 0 ? .2 : 0))); patNext += (1 / rate) * (0.9 + Math.random() * 0.2); }
+    return;
+  }
   engGain.gain.setTargetAtTime(on ? 0.018 + (c.turboOn ? 0.01 : 0) : 0, ac.currentTime, 0.05);
   eng.frequency.setTargetAtTime(46 + r * 120 + (c && c.turboOn ? 30 : 0), ac.currentTime, 0.05);
   eng2.frequency.setTargetAtTime(92 + r * 240, ac.currentTime, 0.05);
@@ -1907,7 +2139,8 @@ function uiTick() {
   $('touch').hidden = !(coarse && raceUI());
   $('tItem').hidden = !race.items;
   $('rotate').hidden = !(coarse && portrait && raceUI());
-  $('tools').hidden = !(state === 'menu' || state === 'room' || state === 'boot' || state === 'results' || state === 'paused');
+  $('tools').hidden = !(state === 'menu' || state === 'room' || state === 'pick' || state === 'boot' || state === 'results' || state === 'paused');
+  if (state === 'pick') $('pickTime').textContent = Math.max(0, Math.ceil((pickEnd - performance.now()) / 1000));
 }
 
 
@@ -1918,7 +2151,7 @@ let last = performance.now();
 function frame(t) {
   const dt = Math.min(0.05, (t - last) / 1000); last = t;
   update(dt); render(); drawJoy();
-  if (state === 'menu' || state === 'room') for (const p of pickers) drawPreview(p, false);
+  if (state === 'menu' || state === 'room' || state === 'pick') for (const p of pickers) drawPreview(p, false);
   uiTick();
   requestAnimationFrame(frame);
 }
@@ -1937,12 +2170,13 @@ async function init() {
   for (const k of TRACK_KEYS) THUMBS[k] = trackThumb(k, 64, 40);
   [groundC, groundG] = mk(W, H); ground = groundG.createImageData(W, H); g32 = new Uint32Array(ground.data.buffer);
   useTrack(pcfg.track !== 'random' ? pcfg.track : 'istanbul');
-  buildPicker($('carsEntry')); buildPicker($('carsRoom')); syncPickers();
-  cfgRoomUI = cfgUI($('cfgRoom'), patch => { if (room && room.host === myId) send({ type: 'cfg', cfg: Object.assign({}, CFG_DEF, room.cfg, patch) }); });
+  buildPicker($('carsPrac')); buildPicker($('carsRoom')); buildPicker($('carsPick'), COMP_CARS); syncPickers();
+  cfgRoomUI = cfgUI($('cfgRoom'), patch => { if (room && room.host === myId) send({ type: 'cfg', cfg: Object.assign({}, CFG_DEF, room.cfg, patch) }); }, { tracks: TRACK_KEYS, choose: true });
   cfgPracUI = cfgUI($('cfgPractice'), patch => {
     pcfg = Object.assign({}, pcfg, patch); store.set('hgp-pcfg', pcfg); cfgPracUI.set(pcfg, true);
     if (patch.track && patch.track !== 'random') useTrack(patch.track);
-  });
+  }, { tracks: COMP_TRACKS });
+  if (!COMP_TRACKS.includes(pcfg.track) && pcfg.track !== 'random') pcfg.track = 'istanbul';
   cfgPracUI.set(pcfg, true);
   renderBoard();
   state = 'menu'; showScreen('entry');
