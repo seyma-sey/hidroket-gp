@@ -1288,7 +1288,7 @@ function update(dt) {
   for (let i = haz.length - 1; i >= 0; i--) if (now - haz[i].t0 > 30000) haz.splice(i, 1);
   stepParticles(dt);
   if (racing) raceT = mode === 'online' ? (now - goAt) / 1000 : raceT + dt;
-  if (state === 'finish') { finishT += dt; if (mode === 'practice' && finishT > 2.5) startResults(practiceResults()); }
+  if (state === 'finish') { finishT += dt; if (mode === 'practice' && finishT > 2.5) { startResults(practiceResults()); if (acct) send({ type: 'pracDone', ms: Math.round(raceT * 1000) }); } }
   if (mode === 'online' && me && (state === 'count' || racing)) {
     sendT -= dt;
     if (sendT <= 0) { sendT = 0.05;
@@ -1638,7 +1638,11 @@ function drawPreview(p, force) {
   g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(18, 38, 60, 4);
   M.renderCar(g, CARK[p.key].model, on ? p.yaw : -Math.PI / 2 + .7, 1.35, 48, 38, .5);
 }
+// hesap yoksa ana menü yerine giriş/kayıt ekranı
+const homeScreen = () => acct ? 'entry' : (guest ? 'entry' : 'auth');
 function showScreen(which) {
+  if (which === 'entry' && !acct && !guest) which = 'auth';
+  $('scrAuth').hidden = which !== 'auth';
   $('scrEntry').hidden = which !== 'entry';
   $('scrOnline').hidden = which !== 'online';
   $('scrPick').hidden = which !== 'pick';
@@ -1777,13 +1781,75 @@ $('lbFree').onclick = () => { lbMode = 'free'; buildLbTracks(); renderBoard(); }
 buildLbTracks();
 
 function needName(errEl) {
-  const n = playerName();
-  if (!n) { errEl.textContent = 'Önce pilot adını yaz.'; $('name').focus(); return null; }
-  store.set('hgp-name', n); return n;
+  if (!acct) { errEl.textContent = 'Online oynamak için giriş yapmalısın. ÇIKIŞ / GİRİŞ YAP düğmesini kullan.'; return null; }
+  return acct.name;
 }
 function needNet(errEl) {
   if (!net.ok) { errEl.textContent = location.protocol === 'file:' ? 'Dosya olarak açtın, online oynamak için sunucu adresinden gir. Antrenman çalışır.' : 'Sunucuya bağlı değilsin. Birkaç saniye bekle ya da antrenman yap.'; return false; }
   return true;
+}
+// ---- hesap: giriş / kayıt ----
+let acct = store.get('hgp-acct', null), guest = false, profile = null, pendingAuth = false, authMode = 'login';
+if (acct && !(acct.name && acct.token)) acct = null;
+function syncPilot() { $('pilotName').textContent = acct ? acct.name : 'MİSAFİR'; $('btnLogout').textContent = acct ? 'ÇIKIŞ' : 'GİRİŞ YAP'; $('btnProfile').hidden = !acct; }
+function showAuthForm(modeName) {
+  authMode = modeName; $('authPick').hidden = true; $('authForm').hidden = false; $('authErr').textContent = '';
+  const reg = modeName === 'register';
+  $('authTitle').textContent = reg ? 'KAYDOL' : 'GİRİŞ YAP'; $('btnAuthGo').textContent = reg ? 'KAYDOL' : 'GİRİŞ YAP';
+  $('aPass2Row').hidden = !reg; $('aPass').autocomplete = reg ? 'new-password' : 'current-password';
+  $('authHint').textContent = reg ? 'Kullanıcı adı 3-14 karakter (harf, rakam, boşluk, _ . -). Şifre en az 6 karakter. Skor tablosunda bu adla görünürsün.' : '';
+  $('aUser').focus();
+}
+$('btnShowLogin').onclick = () => showAuthForm('login');
+$('btnShowReg').onclick = () => showAuthForm('register');
+$('btnAuthBack').onclick = () => { $('authForm').hidden = true; $('authPick').hidden = false; $('authErr').textContent = ''; };
+$('authForm').addEventListener('submit', e => {
+  e.preventDefault(); initAudio();
+  const name = $('aUser').value.trim(), pass = $('aPass').value, err = $('authErr');
+  if (name.length < 3) { err.textContent = 'Kullanıcı adı en az 3 karakter olmalı.'; return; }
+  if (pass.length < 6) { err.textContent = 'Şifre en az 6 karakter olmalı.'; return; }
+  if (authMode === 'register' && pass !== $('aPass2').value) { err.textContent = 'Şifreler aynı değil.'; return; }
+  if (!net.ok) { err.textContent = 'Sunucuya bağlı değilsin. Birkaç saniye bekle (sunucu uyanıyor olabilir).'; return; }
+  err.textContent = ''; pendingAuth = true; $('btnAuthGo').disabled = true; setTimeout(() => $('btnAuthGo').disabled = false, 2500);
+  send({ type: authMode, name, pass });
+});
+$('btnGuest').onclick = () => { guest = true; syncPilot(); showScreen('entry'); };
+$('btnLogout').onclick = () => {
+  if (acct) { send({ type: 'logout', token: acct.token }); acct = null; store.set('hgp-acct', null); profile = null; }
+  guest = false; syncPilot(); room = null; mode = null; state = 'menu';
+  $('authForm').hidden = true; $('authPick').hidden = false; showScreen('auth');
+};
+$('btnProfile').onclick = () => { send({ type: 'profile' }); renderProfile(); openDrawer('profile'); };
+const fmtDur = ms => { const sec = Math.round(ms / 1000), m = Math.floor(sec / 60), h = Math.floor(m / 60); return h ? h + ' sa ' + (m % 60) + ' dk' : m ? m + ' dk ' + (sec % 60) + ' sn' : sec + ' sn'; };
+const fmtDate = d => { const x = new Date(d); return x.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit' }) + ' ' + x.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }); };
+const MODE_TR = { comp: 'REKABETÇİ', free: 'SERBEST' };
+function renderProfile() {
+  if (!profile) return; const st = profile.stats || {}, hist = st.hist || [];
+  $('profName').textContent = String(profile.name).toLocaleUpperCase('tr');
+  $('profSince').textContent = 'Üyelik: ' + new Date(profile.created).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
+  const box = $('profStats'); box.textContent = '';
+  const card = (k, v) => { const d = document.createElement('div'); d.className = 'pstat'; const a = document.createElement('span'); a.textContent = k; const b = document.createElement('b'); b.textContent = v; d.append(a, b); box.append(d); };
+  card('OYUN SÜRESİ', fmtDur((st.playMs || 0) + (st.pracMs || 0)));
+  card('ONLINE YARIŞ', String(st.races || 0)); card('GALİBİYET', String(st.wins || 0)); card('PODYUM', String(st.podiums || 0));
+  card('BİTİRME', st.races ? Math.round(100 * (st.finishes || 0) / st.races) + '%' : '—'); card('TUR', String(st.laps || 0));
+  card('ANTRENMAN', String(st.pracRaces || 0));
+  const top = $('profTop'); top.textContent = '';
+  const best = hist.filter(h => h.fin).sort((a, b) => a.pos - b.pos || b.of - a.of || a.tot - b.tot).slice(0, 5);
+  if (!best.length) { const p = document.createElement('p'); p.className = 'empty'; p.textContent = 'Henüz bitirdiğin online yarış yok.'; top.append(p); }
+  for (const h of best) { const r = document.createElement('div'); r.className = 'topm';
+    const md = document.createElement('span'); md.className = 'md ' + (['g', 's', 'b'][h.pos - 1] || ''); md.textContent = h.pos + '.';
+    const t = document.createElement('span'); t.textContent = (TRACKS[h.t] ? TRACKS[h.t].name : h.t) + ' · ' + MODE_TR[h.k] + ' · ' + cname(CARK[h.c] || CARS[0]) + ' · ' + h.of + ' pilot içinde · ' + fmt2(h.tot) + ' · ' + fmtDate(h.d);
+    r.append(md, t); top.append(r); }
+  const tb = $('profBest').tBodies[0]; tb.textContent = '';
+  const td = t => { const d = document.createElement('td'); d.textContent = t; return d; };
+  for (const [k, b] of Object.entries(st.best || {})) { const [kind, tk] = k.split(':'); const tr = document.createElement('tr');
+    const last = td(b.race ? fmt2(b.race) + ' (' + b.raceLaps + ' tur)' : '—'); last.className = 't';
+    tr.append(td(TRACKS[tk] ? TRACKS[tk].short : tk), td(MODE_TR[kind] || kind), td(b.lap ? fmt2(b.lap) + ' · ' + cname(CARK[b.lapCar] || CARS[0]) : '—'), last); tb.append(tr); }
+  if (!tb.children.length) { const tr = document.createElement('tr'); const d = td('Henüz rekor yok.'); d.colSpan = 4; tr.append(d); tb.append(tr); }
+  const hb = $('profHist').tBodies[0]; hb.textContent = '';
+  for (const h of hist.slice(0, 25)) { const tr = document.createElement('tr'); const last = td(h.fin ? fmt2(h.tot) : 'BİTİREMEDİ'); last.className = 't';
+    tr.append(td(fmtDate(h.d)), td(MODE_TR[h.k] || h.k), td(TRACKS[h.t] ? TRACKS[h.t].short : h.t), td(cname(CARK[h.c] || CARS[0])), td(h.pos + '/' + h.of), last); hb.append(tr); }
+  if (!hb.children.length) { const tr = document.createElement('tr'); const d = td('Henüz online yarış yok.'); d.colSpan = 6; tr.append(d); hb.append(tr); }
 }
 // giriş: üç mod
 let onlineKind = 'comp';
@@ -1824,7 +1890,7 @@ $('code').addEventListener('input', () => { $('code').value = $('code').value.to
    AĞ
    ========================================================= */
 const net = { ws: null, ok: false, retry: 0, wakeTimer: 0 };
-function setNet(s, t) { $('netStatus').dataset.s = s; $('netText').textContent = t; }
+function setNet(s, t) { for (const [a, b] of [['netStatus', 'netText'], ['authNet', 'authNetText']]) { $(a).dataset.s = s; $(b).textContent = t; } }
 function send(o) { if (net.ok && net.ws && net.ws.readyState === 1) net.ws.send(JSON.stringify(o)); }
 function connect() {
   if (location.protocol === 'file:') { setNet('bad', 'Çevrimdışı: dosya olarak açıldı. Antrenman çalışır.'); return; }
@@ -1856,8 +1922,21 @@ function onMsg(m) {
   const now = performance.now();
   switch (m.type) {
     case 'welcome': myId = m.id; if (m.board) { board = m.board; renderBoard(); }
+      if (acct) send({ type: 'auth', name: acct.name, token: acct.token });
       if (params.get('oda') && !room) { $('code').value = params.get('oda').toUpperCase().slice(0, 4); if (state === 'menu' && playerName()) { onlineKind = 'free'; showScreen('online'); $('onlineTitle').textContent = 'ODAYA KATIL'; $('onlineDesc').textContent = 'Linkle geldin. Kod hazır, KATIL\'a bas.'; } }
       break;
+    case 'authOk':
+      acct = { name: m.name, token: m.token }; store.set('hgp-acct', acct); guest = false; profile = m.profile;
+      $('name').value = m.name; syncPilot(); $('authErr').textContent = ''; $('aPass').value = ''; $('aPass2').value = '';
+      if (!$('scrAuth').hidden) showScreen('entry');
+      if (pendingAuth) { sfx('lap'); pendingAuth = false; }
+      renderProfile(); break;
+    case 'authErr':
+      pendingAuth = false; $('btnAuthGo').disabled = false;
+      if (m.op === 'auth') { acct = null; store.set('hgp-acct', null); syncPilot(); if (state === 'menu') showScreen('auth'); }
+      $('authErr').textContent = m.msg; break;
+    case 'loggedOut': break;
+    case 'profile': profile = m.profile; renderProfile(); break;
     case 'joined': mode = 'online'; state = 'room'; showScreen('room'); $('roomErr').textContent = '';
       try { history.replaceState(null, '', location.pathname + '?oda=' + m.code); } catch (e) {}
       break;
@@ -2202,7 +2281,7 @@ addEventListener('pointerdown', firstGesture, true);
 addEventListener('keydown', e => { if (e.key !== 'Escape' && e.key !== 'F11') firstGesture(e); }, true);
 
 // çekmeceler
-const drawers = { board: $('drawerBoard'), set: $('drawerSet'), music: $('drawerMusic') };
+const drawers = { board: $('drawerBoard'), set: $('drawerSet'), music: $('drawerMusic'), profile: $('drawerProfile') };
 const openDrawer = k => { for (const d of Object.values(drawers)) d.hidden = true; drawers[k].hidden = false; const b = drawers[k].querySelector('[data-close]'); if (b) b.focus(); };
 const closeDrawers = () => { for (const d of Object.values(drawers)) d.hidden = true; };
 const drawerOpen = () => Object.values(drawers).some(d => !d.hidden);
@@ -2273,11 +2352,12 @@ function frame(t) {
   requestAnimationFrame(frame);
 }
 async function init() {
-  $('name').value = store.get('hgp-name', '') || params.get('name') || '';
+  $('name').value = acct ? acct.name : (params.get('name') || ''); syncPilot();
   showScreen(null);
   requestAnimationFrame(frame);
   const [em, wd] = await Promise.all([loadImg(window.HGP_LOGO.emblem), loadImg(window.HGP_LOGO.word)]);
   $('brandEm').src = window.HGP_LOGO.emblem; $('brandWord').src = window.HGP_LOGO.word;
+  for (const e of document.querySelectorAll('.brandEm')) e.src = window.HGP_LOGO.emblem; for (const e of document.querySelectorAll('.brandWord')) e.src = window.HGP_LOGO.word;
   const emB = tint(em, '#0b0b0b'), emW = tint(em, '#ffffff'), wdB = tint(wd, '#0b0b0b'), wdW = tint(wd, '#ffffff');
   Object.assign(LOGO, { emB18: scaled(emB, 17), emW18: scaled(emW, 18), wdB52: scaled(wdB, 50), wdB44: scaled(wdB, 44), wdB38: scaled(wdB, 38), wdW52: scaled(wdW, 52), wdW30: scaled(wdW, 30) });
   if (document.fonts && document.fonts.load) await Promise.race([document.fonts.load('8px "Press Start 2P"').catch(() => {}), new Promise(r => setTimeout(r, 1500))]);

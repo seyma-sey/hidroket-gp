@@ -114,6 +114,110 @@ function addRecord(list, entry, max = 50) {
   return list.indexOf(entry) >= 0;
 }
 
+
+/* ---------------- hesaplar ----------------
+   Kullanıcı adı + şifre. Şifre asla düz saklanmaz: rastgele tuz + scrypt özeti.
+   Oturum: cihazda saklanan rastgele anahtar; sunucuda sadece SHA-256 özeti tutulur.
+   Hepsi tek kayıt halinde (Upstash ya da data/users.json), bellekte de tutulur. */
+const USERS_KEY = "hidroket-gp-users";
+const USERS_FILE = path.join(__dirname, "data", "users.json");
+let users = {};                       // ad(küçük harf) -> hesap
+let usersLoaded = false, usersTimer = null;
+const ukey = n => String(n || "").trim().toLocaleLowerCase("tr");
+const sha = t => crypto.createHash("sha256").update(t).digest("hex");
+async function loadUsers() {
+  try {
+    if (UPSTASH_URL) {
+      const r = await fetch(UPSTASH_URL + "/get/" + USERS_KEY, { headers: { Authorization: "Bearer " + UPSTASH_TOKEN } });
+      const j = await r.json(); if (j && j.result) users = JSON.parse(j.result);
+      if (j && "result" in j) usersLoaded = true;
+    } else { if (fs.existsSync(USERS_FILE)) users = JSON.parse(fs.readFileSync(USERS_FILE, "utf8")); usersLoaded = true; }
+  } catch (e) { console.warn("Hesaplar yüklenemedi:", e.message); }
+  if (!users || typeof users !== "object") users = {};
+  console.log("Hesaplar:", Object.keys(users).length, usersLoaded ? "" : "(YÜKLENEMEDİ — kayıt kapalı)");
+}
+function saveUsers() {
+  if (!usersLoaded) return;           // yüklenemediyse üzerine yazma (veri kaybı olmasın)
+  clearTimeout(usersTimer);
+  usersTimer = setTimeout(async () => {
+    const body = JSON.stringify(users);
+    try {
+      if (UPSTASH_URL) await fetch(UPSTASH_URL + "/set/" + USERS_KEY, { method: "POST", headers: { Authorization: "Bearer " + UPSTASH_TOKEN }, body });
+      else { fs.mkdirSync(path.dirname(USERS_FILE), { recursive: true }); fs.writeFileSync(USERS_FILE, body); }
+    } catch (e) { console.warn("Hesaplar kaydedilemedi:", e.message); }
+  }, 1500);
+}
+const hashPass = (pass, salt) => new Promise((res, rej) => crypto.scrypt(pass, salt, 64, { N: 16384, r: 8, p: 1 }, (e, k) => e ? rej(e) : res(k.toString("hex"))));
+const NAME_RE = /^[A-Za-z0-9ÇĞİÖŞÜçğıöşü_. -]{3,14}$/;
+function newStats() { return { races: 0, finishes: 0, wins: 0, podiums: 0, laps: 0, playMs: 0, pracRaces: 0, pracMs: 0, best: {}, hist: [] }; }
+function publicProfile(u) {
+  return { name: u.name, created: u.created, stats: u.stats };
+}
+function newToken(u) {
+  const t = crypto.randomBytes(32).toString("hex");
+  u.tokens = (u.tokens || []).filter(x => x.exp > Date.now()).slice(-4);        // en fazla 5 cihaz
+  u.tokens.push({ h: sha(t), exp: Date.now() + 180 * 864e5 });                    // 180 gün
+  return t;
+}
+// deneme sınırı (IP başına): yanlış şifre ve kayıt sayısı
+const tries = new Map();
+function limited(ip, kind, max, winMs) {
+  const k = kind + "|" + ip, now = Date.now(); let t = tries.get(k);
+  if (!t || now - t.t0 > winMs) { t = { t0: now, n: 0 }; tries.set(k, t); }
+  return ++t.n > max;
+}
+setInterval(() => { const now = Date.now(); for (const [k, t] of tries) if (now - t.t0 > 3600e3) tries.delete(k); }, 600e3);
+async function onAuth(p, m) {
+  const fail = msg => send(p.ws, { type: "authErr", msg, op: m.type });
+  if (m.type === "auth") {                                                        // kayıtlı oturumla otomatik giriş
+    const u = users[ukey(m.name)], h = sha(String(m.token || ""));
+    if (!u || !(u.tokens || []).some(x => x.h === h && x.exp > Date.now())) return fail("Oturumun sona ermiş, tekrar giriş yap.");
+    return loginOk(p, u, String(m.token));
+  }
+  if (m.type === "logout") { const u = p.user && users[p.user]; if (u) { const h = sha(String(m.token || "")); u.tokens = (u.tokens || []).filter(x => x.h !== h); saveUsers(); } p.user = null; leaveRoom(p); return send(p.ws, { type: "loggedOut" }); }
+  const name = String(m.name || "").replace(/\s+/g, " ").trim(), pass = String(m.pass || "");
+  if (!usersLoaded) return fail("Hesap sunucusu şu an kullanılamıyor, biraz sonra tekrar dene.");
+  if (m.type === "register") {
+    if (!NAME_RE.test(name)) return fail("Kullanıcı adı 3-14 karakter olmalı: harf, rakam, boşluk, _ . -");
+    if (pass.length < 6 || pass.length > 64) return fail("Şifre en az 6 karakter olmalı.");
+    if (users[ukey(name)]) return fail("Bu kullanıcı adı alınmış.");
+    if (limited(p.ip, "reg", 5, 3600e3)) return fail("Çok fazla kayıt denemesi. Bir saat sonra tekrar dene.");
+    const salt = crypto.randomBytes(16).toString("hex"), hash = await hashPass(pass, salt);
+    if (users[ukey(name)]) return fail("Bu kullanıcı adı alınmış.");
+    const u = users[ukey(name)] = { name, salt, hash, created: Date.now(), tokens: [], stats: newStats() };
+    console.log("Yeni hesap:", name);
+    return loginOk(p, u, newToken(u));
+  }
+  if (m.type === "login") {
+    if (limited(p.ip, "login", 8, 600e3)) return fail("Çok fazla deneme. 10 dakika sonra tekrar dene.");
+    const u = users[ukey(name)];
+    const salt = u ? u.salt : "x".repeat(32), hash = await hashPass(pass, salt);    // hesap yoksa da aynı süre beklet
+    if (!u || !crypto.timingSafeEqual(Buffer.from(hash, "hex"), Buffer.from(u.hash, "hex"))) return fail("Kullanıcı adı ya da şifre yanlış.");
+    return loginOk(p, u, newToken(u));
+  }
+}
+function loginOk(p, u, token) {
+  p.user = ukey(u.name); p.name = u.name; saveUsers();
+  send(p.ws, { type: "authOk", name: u.name, token, profile: publicProfile(u) });
+}
+// yarış bitince her hesaba istatistik ve geçmiş yaz
+function recordStats(room, rows) {
+  const rc = room.race || {}, dur = room.raceStart ? Date.now() - room.raceStart : 0;
+  rows.forEach((r, i) => {
+    const p = room.players.get(r.id); if (!p || !p.user) return; const u = users[p.user]; if (!u) return;
+    const st = u.stats = Object.assign(newStats(), u.stats || {});
+    st.races++; st.laps += (p.laps || []).length; st.playMs += Math.min(dur, 15 * 60e3);
+    if (r.finished) { st.finishes++; if (i === 0) st.wins++; if (i < 3) st.podiums++; }
+    const bk = (rc.kind || "free") + ":" + rc.track, b = st.best[bk] = st.best[bk] || {};
+    if (p.best && (!b.lap || p.best < b.lap)) { b.lap = +p.best.toFixed(3); b.lapCar = p.car; }
+    if (r.finished && (!b.race || r.total < b.race) && rc.laps) { b.race = +r.total.toFixed(3); b.raceCar = p.car; b.raceLaps = rc.laps; }
+    st.hist.unshift({ d: Date.now(), k: rc.kind || "free", t: rc.track, c: p.car, pos: i + 1, of: rows.length, fin: !!r.finished, tot: r.finished ? +r.total.toFixed(3) : 0, best: p.best ? +p.best.toFixed(3) : 0, laps: rc.laps });
+    if (st.hist.length > 60) st.hist.length = 60;
+    send(p.ws, { type: "profile", profile: publicProfile(u) });
+  });
+  saveUsers();
+}
+
 /* ---------------- odalar ---------------- */
 const rooms = new Map();
 let nextId = 1;
@@ -207,6 +311,7 @@ function endRace(room) {
     .sort((a, b) => (b.finished - a.finished) || (a.finished ? a.total - b.total : (b.lap + b.f) - (a.lap + a.f)));
   broadcast(room, { type: "results", rows });
   broadcast(room, { type: "board", board });
+  recordStats(room, rows);
   pushRoom(room);
   room.timers.push(setTimeout(() => {
     room.phase = "lobby";
@@ -233,11 +338,11 @@ function onLap(p, m) {
   }
   p.lap = n; p.sect = 0; p.laps.push(time); p.total = total;
   if (!p.best || time < p.best) p.best = time;
-  let rec = addRecord(tb.laps, { name: p.name, car: p.car, obst: rc.obst, time: +time.toFixed(3), date: Date.now() });
+  let rec = addRecord(tb.laps, { name: p.name, user: p.user || undefined, car: p.car, obst: rc.obst, time: +time.toFixed(3), date: Date.now() });
   broadcast(room, { type: "lap", id: p.id, n, time });
   if (n >= rc.laps) {
     p.finished = true;
-    if (rc.laps === (room.kind === "comp" ? COMP_CFG.laps : 3)) rec = addRecord(tb.races, { name: p.name, car: p.car, obst: rc.obst, time: +total.toFixed(3), date: Date.now() }) || rec;
+    if (rc.laps === (room.kind === "comp" ? COMP_CFG.laps : 3)) rec = addRecord(tb.races, { name: p.name, user: p.user || undefined, car: p.car, obst: rc.obst, time: +total.toFixed(3), date: Date.now() }) || rec;
     broadcast(room, { type: "finish", id: p.id, total });
     if (!room.firstFinish) { room.firstFinish = Date.now(); room.timers.push(setTimeout(() => endRace(room), FINISH_GRACE)); broadcast(room, { type: "grace", ms: FINISH_GRACE }); }
     checkRaceEnd(room);
@@ -299,26 +404,33 @@ server.on("upgrade", (req, socket) => {
   if (url.pathname !== "/ws" || String(req.headers.upgrade).toLowerCase() !== "websocket" || !key) { socket.destroy(); return; }
   const accept = crypto.createHash("sha1").update(key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11").digest("base64");
   socket.write("HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: " + accept + "\r\n\r\n");
-  const ws = new Sock(socket); clients.add(ws); onConnection(ws);
+  const ws = new Sock(socket); clients.add(ws);
+  const ip = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim() || socket.remoteAddress || "?";
+  onConnection(ws, ip);
 });
-function onConnection(ws) {
-  const p = { id: nextId++, ws, name: "Pilot", car: "turaz", room: null, racing: false, finished: false, f: 0, st: null, msgs: 0, alive: true };
+function onConnection(ws, ip) {
+  const p = { id: nextId++, ws, ip, user: null, name: "Pilot", car: "turaz", room: null, racing: false, finished: false, f: 0, st: null, msgs: 0, alive: true };
   send(ws, { type: "welcome", id: p.id, board });
   ws.on("message", raw => {
     if (++p.msgs > 80) return;            // saniyede en fazla ~80 mesaj
     let m; try { m = JSON.parse(raw); } catch (e) { return; }
     if (!m || typeof m.type !== "string") return;
     switch (m.type) {
-      case "hello": p.name = cleanName(m.name); if (CARS.includes(m.car)) p.car = m.car; break;
-      case "create": { p.name = cleanName(m.name); if (CARS.includes(m.car)) p.car = m.car; joinRoom(p, makeRoom(m.kind)); break; }
+      case "hello": if (!p.user) p.name = cleanName(m.name); if (CARS.includes(m.car)) p.car = m.car; break;
+      case "register": case "login": case "auth": case "logout": onAuth(p, m).catch(e => console.warn("auth:", e.message)); break;
+      case "profile": if (p.user && users[p.user]) send(ws, { type: "profile", profile: publicProfile(users[p.user]) }); break;
+      case "pracDone": if (p.user && users[p.user]) { const st = users[p.user].stats = Object.assign(newStats(), users[p.user].stats); st.pracRaces++; st.pracMs += Math.min(15 * 60e3, Math.max(0, +m.ms || 0)); saveUsers(); send(ws, { type: "profile", profile: publicProfile(users[p.user]) }); } break;
+      case "create": { if (!p.user) return send(ws, { type: "error", msg: "Online oynamak için önce giriş yap." }); if (CARS.includes(m.car)) p.car = m.car; joinRoom(p, makeRoom(m.kind)); break; }
       case "join": {
-        p.name = cleanName(m.name); if (CARS.includes(m.car)) p.car = m.car;
+        if (!p.user) return send(ws, { type: "error", msg: "Online oynamak için önce giriş yap." });
+        if (CARS.includes(m.car)) p.car = m.car;
         const room = rooms.get(String(m.code || "").toUpperCase().trim());
         if (!room) return send(ws, { type: "error", msg: "Bu kodla bir oda yok. Kodu kontrol et." });
         joinRoom(p, room); break;
       }
       case "quick": {
-        p.name = cleanName(m.name); if (CARS.includes(m.car)) p.car = m.car;
+        if (!p.user) return send(ws, { type: "error", msg: "Online oynamak için önce giriş yap." });
+        if (CARS.includes(m.car)) p.car = m.car;
         const kind = m.kind === "comp" ? "comp" : "free";
         let room = [...rooms.values()].find(r => r.kind === kind && r.phase === "lobby" && r.players.size < MAX_PLAYERS);
         joinRoom(p, room || makeRoom(kind)); break;
@@ -368,7 +480,7 @@ setInterval(() => {   // ölü bağlantıları temizle
   for (const ws of clients) { if (ws._dead) { ws.terminate(); continue; } ws._dead = true; ws.ping(); ws.once("pong", () => { ws._dead = false; }); }
 }, 30000);
 
-loadBoard().then(() => server.listen(PORT, () => {
+Promise.all([loadBoard(), loadUsers()]).then(() => server.listen(PORT, () => {
   console.log("Hidroket GP sunucusu çalışıyor: http://localhost:" + PORT);
   console.log(UPSTASH_URL ? "Skor tablosu: Upstash (kalıcı)" : "Skor tablosu: data/leaderboard.json");
 }));

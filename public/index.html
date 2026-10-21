@@ -122,6 +122,17 @@ dl.keys dt{color:var(--blue);font-weight:600} dl.keys dd{margin:0;color:var(--si
 .seg button[aria-pressed="true"]{background:#13304d;color:var(--gold)}
 
 .tabs{display:flex;gap:6px;flex-wrap:wrap}
+.authPick{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.authForm{display:flex;flex-direction:column;gap:12px}
+.linkbtn{background:none;border:0;color:var(--dim);font-family:var(--f-body);font-size:13px;text-decoration:underline;cursor:pointer;padding:6px 0}
+.linkbtn:hover{color:var(--ink)}
+.pilotbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;background:#0b2238;border:1px solid var(--line);padding:10px 12px}
+.pilotbar .pl{font-family:var(--f-pix);font-size:8px;color:var(--dim)} .pilotbar b{font-family:var(--f-pix);font-size:12px;color:var(--gold);font-weight:400}
+.pstats{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+.pstat{background:#0b2238;border:1px solid var(--line);padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+.pstat span{font-family:var(--f-pix);font-size:7px;color:var(--dim);letter-spacing:.04em} .pstat b{font-family:var(--f-pix);font-size:14px;color:var(--ink);font-weight:400}
+.topm{display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid #16385a;font-size:13px}
+.topm .md{font-family:var(--f-pix);font-size:12px;width:2.2em;text-align:center} .topm .md.g{color:var(--gold)} .topm .md.s{color:#d7dde3} .topm .md.b{color:#e09a5a}
 .modes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 @media (max-width:700px){.modes{grid-template-columns:1fr}}
 .mode{display:flex;flex-direction:column;gap:8px;align-items:flex-start;text-align:left;background:#0b2238;border:2px solid var(--line);color:var(--ink);padding:14px;cursor:pointer;font-family:var(--f-body);box-shadow:0 4px 0 #06121f}
@@ -234,12 +245,35 @@ pre{margin:0;background:#061526;border:1px solid var(--line);padding:14px;overfl
     </div>
 
     <div class="overlay" id="overlay">
+      <!-- hesap: giriş yap / kaydol -->
+      <section class="card" id="scrAuth" hidden>
+        <div class="brand"><img class="brandEm" alt=""><img class="brandWord word" alt="hidroket"><b>GP</b></div>
+        <div class="authPick" id="authPick">
+          <button class="btn go" id="btnShowLogin" type="button">GİRİŞ YAP</button>
+          <button class="btn" id="btnShowReg" type="button">KAYDOL</button>
+        </div>
+        <form class="authForm" id="authForm" hidden autocomplete="on">
+          <h2 id="authTitle">GİRİŞ YAP</h2>
+          <div class="field"><label for="aUser">KULLANICI ADI</label><input type="text" id="aUser" maxlength="14" autocomplete="username" spellcheck="false" required></div>
+          <div class="field"><label for="aPass">ŞİFRE</label><input type="password" id="aPass" maxlength="64" autocomplete="current-password" required></div>
+          <div class="field" id="aPass2Row"><label for="aPass2">ŞİFRE TEKRAR</label><input type="password" id="aPass2" maxlength="64" autocomplete="new-password"></div>
+          <div class="row"><button class="btn go" id="btnAuthGo" type="submit">GİRİŞ YAP</button><button class="btn ghost" id="btnAuthBack" type="button">GERİ</button></div>
+          <p class="note" id="authHint"></p>
+        </form>
+        <p class="err" id="authErr" role="alert"></p>
+        <div class="row split">
+          <button class="linkbtn" id="btnGuest" type="button">Hesapsız antrenman yap</button>
+          <div class="status" id="authNet" data-s="wait"><span class="dot"></span><span id="authNetText">Sunucuya bağlanılıyor…</span></div>
+        </div>
+      </section>
+
       <!-- giriş: mod seçimi -->
       <section class="card" id="scrEntry">
         <div class="brand" id="brandPill" aria-label="hidroket"><img id="brandEm" alt=""><img id="brandWord" class="word" alt="hidroket"><b>GP</b></div>
-        <div class="field">
-          <label for="name">PİLOT ADI</label>
-          <input type="text" id="name" maxlength="14" autocomplete="nickname" placeholder="örn. Rahmet" spellcheck="false">
+        <input type="hidden" id="name">
+        <div class="pilotbar">
+          <div><span class="pl">PİLOT</span> <b id="pilotName">—</b></div>
+          <div class="row"><button class="btn ghost" id="btnProfile" type="button">PROFİL</button><button class="btn ghost" id="btnLogout" type="button">ÇIKIŞ</button></div>
         </div>
         <div class="modes">
           <button class="mode" id="btnModePrac" type="button"><b>ANTRENMAN</b><span>İnternetsiz. Botlarla yarış, istediğin pist ve araç.</span></button>
@@ -341,6 +375,18 @@ pre{margin:0;background:#061526;border:1px solid var(--line);padding:14px;overfl
     </div>
     <div class="lbwrap"><table class="lb" id="lb"><thead><tr><th>#</th><th>PİLOT</th><th>ARAÇ</th><th>ENGEL</th><th style="text-align:right">SÜRE</th></tr></thead><tbody></tbody></table></div>
     <p class="empty" id="lbEmpty">Henüz kayıt yok. İlk turu sen at.</p>
+  </div>
+</div>
+
+<!-- profil çekmecesi -->
+<div class="drawer" id="drawerProfile" hidden>
+  <div class="dcard" role="dialog" aria-label="Profil">
+    <div class="dhead"><h2 id="profName">PROFİL</h2><button class="btn ghost" data-close>KAPAT</button></div>
+    <p class="note" id="profSince"></p>
+    <div class="pstats" id="profStats"></div>
+    <section class="panel"><h3>EN İYİ MAÇLAR</h3><div id="profTop"></div></section>
+    <section class="panel"><h3>PİST REKORLARIN</h3><div class="lbwrap"><table class="lb" id="profBest"><thead><tr><th>PİST</th><th>MOD</th><th>EN İYİ TUR</th><th style="text-align:right">EN İYİ YARIŞ</th></tr></thead><tbody></tbody></table></div></section>
+    <section class="panel"><h3>OYUN GEÇMİŞİ</h3><div class="lbwrap"><table class="lb" id="profHist"><thead><tr><th>TARİH</th><th>MOD</th><th>PİST</th><th>ARAÇ</th><th>SIRA</th><th style="text-align:right">SÜRE</th></tr></thead><tbody></tbody></table></div></section>
   </div>
 </div>
 
