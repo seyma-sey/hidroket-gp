@@ -289,6 +289,95 @@ const SPEC = {
       box(28.6, 29.4, 10.2, 14.2, 20.4, 21.4, 0x2a1e16);
     }
 
+  },
+  /* KADİR'İN H100'Ü: beyaz kutu kamyonet. Kısa burun, dik ön cam, düz yüksek tavan, yan kayar kapı ve panel çizgileri,
+     boydan boya siyah yan şerit, siyah aynalar, yuvarlak farlar, ızgaralı tampon. */
+  h100: {
+    W: 20, H: 22, clear: 2,
+    hw: u => kp([[0, .96], [.04, 1], [.9, 1], [.97, .95], [1, .86]], u),
+    belt: u => kp([[0, 19.4], [.03, 20.4], [.72, 20.4], [.76, 19.8], [.84, 12.6], [.92, 10.4], [1, 9]], u),
+    top: u => kp([[0, 19.4], [.03, 20.6], [.72, 20.6], [.76, 20], [.84, 13], [.92, 10.6], [1, 9]], u),
+    cw: .98, nLow: 6, nUp: 4,
+    paint(u, v, z, c) {
+      const av = Math.abs(v), WH = 0xf2f3f1, GR = 0xd8dad8;
+      if (u > .975 && z >= 5.2 && z <= 7.4 && av > .5 && av < .84) return (z > 6.6 ? 0xfdf7e0 : 0xd6d0bc);           // farlar
+      if (u > .975 && z >= 3 && z <= 4.6 && av < .5) return ((Math.round(z * 2) % 2) ? 0x2a2c30 : 0x6a6e72);          // tampon ızgarası
+      if (u > .975 && z < 3) return 0xc9ccca;
+      if (u < .02 && z > 12 && z < 16 && av > .55 && av < .85) return 0xd8322a;                                       // stoplar
+      if (u < .02 && Math.abs(v) < .03 && z > 3 && z < 19) return 0x9aa0a4;                                          // arka kapı çizgisi
+      if (u > .74 && u < .92 && c.isTop && av < .9 && z > 12) return (Math.abs(u - .8) < .012) ? 0x8ab0c4 : 0x2c4454;   // ön cam
+      if (!c.isTop && c.side && u > .66 && u < .76 && z > 12.4 && z < 18.6) return z > 17.6 ? 0x4a6a80 : 0x23384a;  // kapı camı
+      if (!c.isTop && c.side && Math.abs(z - 8.6) < .55 && u > .03 && u < .96) return 0x2a2c30;                     // siyah yan şerit
+      if (!c.isTop && c.side && (Math.abs(u - .64) < .007 || Math.abs(u - .43) < .007 || Math.abs(u - .2) < .007) && z > 3 && z < 19) return 0xb8bcba;  // kapı ve panel çizgileri
+      if (!c.isTop && c.side && u > .44 && u < .62 && ((z > 11 && z < 11.5) || (z > 17.4 && z < 17.9))) return 0xc6cac8;   // kayar kapı rayı
+      if (!c.isTop && c.side && Math.abs(u - .69) < .015 && Math.abs(z - 10.8) < .5) return 0x2a2c30;                // kapı kolu
+      if (c.isTop && u > .9 && Math.abs(v) < .07) return 0xc0c4c2;
+      return z < 3.2 ? GR : WH;
+    },
+    wheels: [{ u: .17, r: 3.8, hub: 0xc9ced3, spokes: 6 }, { u: .8, r: 3.8, hub: 0xc9ced3, spokes: 6 }],
+    extras(put) {
+      for (const y of [-1.4, 21.4]) for (let x = 0; x < 1.6; x += .6) for (let z = 0; z < 2.6; z += .6) put(.735 * 48 + x, y, 14.6 + z, 0x16171a);   // aynalar
+      for (const y of [5.5, 13]) for (let x = 0; x < 4; x += .6) put(.84 * 48 + x * .6, y + x * .3, 13.4 + x * .1, 0x1c1d20);                       // silecekler
+    }
+  },
+  /* ATÖLYENİN ALIŞVERİŞ ARABASI: tel sepet, kırmızı tutamak ve kenar kapakları, kırmızı çocuk oturağı, tekerlekli ayaklar,
+     iki yanda bağlı mavi hidrojen tüpleri ve vanaları. */
+  cart: {
+    W: 16, H: 22, clear: 0, custom: true,
+    wheels: [{ u: .14, r: 1.8, center: true, cover: 0x4a4d52 }, { u: .86, r: 1.8, center: true, cover: 0x4a4d52 }],
+    extras(put) {
+      const box = (x0, x1, y0, y1, z0, z1, c) => { for (let x = x0; x < x1; x += .6) for (let y = y0; y < y1; y += .6) for (let z = z0; z < z1; z += .6) put(x, y, z, typeof c === 'function' ? c(x, y, z) : c); };
+      const line = (a, b, r, c) => { const n = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]) / .4); for (let i = 0; i <= n; i++) { const t = i / n; box(a[0] + (b[0] - a[0]) * t - r, a[0] + (b[0] - a[0]) * t + r, a[1] + (b[1] - a[1]) * t - r, a[1] + (b[1] - a[1]) * t + r, a[2] + (b[2] - a[2]) * t - r, a[2] + (b[2] - a[2]) * t + r, c); } };
+      const ST = 0xc8ced4, RD = 0xd8302a;
+      // ayak çerçevesi ve tekerlek çatalları (önde ve arkada iki çift)
+      for (const y of [2.5, 13.5]) { line([6, y, 1.8], [14, y, 9], .45, ST); line([40, y, 1.8], [34, y, 9], .45, ST);
+        for (const x of [6, 40]) { box(x - 1, x + 1, y - 1, y + 1, 1.6, 2.8, RD); box(x - .8, x + .8, y - .5, y + .5, 0, 1.8, 0x55585c); } }
+      line([10, 2.5, 5.5], [10, 13.5, 5.5], .4, ST); line([37, 2.5, 5.5], [37, 13.5, 5.5], .4, ST);
+      // tel sepet: arkada yüksek, öne doğru alçalan kafes
+      const top = x => 19 - (x - 12) * .12, bot = x => 9 + (x - 12) * .05;
+      for (let x = 12; x <= 40; x += 1.6) for (const y of [1, 15]) for (let z = bot(x); z <= top(x); z += .6) put(x, y, z, ST);   // yan teller (dikey)
+      for (let z = 9; z <= 19; z += 2.2) for (let x = 12; x <= 40; x += .6) for (const y of [1, 15]) if (z <= top(x) && z >= bot(x)) put(x, y, z, 0xb4bcc4);
+      for (let y = 1; y <= 15; y += 1.6) for (let z = bot(40); z <= top(40); z += .6) put(40, y, z, ST);                               // ön tel
+      for (let y = 1; y <= 15; y += 1.6) for (let z = bot(12); z <= top(12); z += .6) put(12, y, z, ST);                               // arka tel
+      for (let x = 12; x <= 40; x += 1.2) for (let y = 1; y <= 15; y += 1.2) put(x, y, bot(x), 0xb4bcc4);                             // taban ızgarası
+      // kırmızı kenar kapakları, tutamak ve oturak
+      for (let x = 12; x <= 40; x += .6) for (const y of [.6, 15.4]) put(x, y, top(x) + .4, RD);
+      box(39.4, 40.8, .4, 15.6, top(40) - .2, top(40) + .8, RD);
+      line([12, 1, 19], [7, 1, 22], .4, ST); line([12, 15, 19], [7, 15, 22], .4, ST); box(5.8, 8.2, .2, 15.8, 21.4, 23, RD);
+      box(13, 18, 4, 12, 15, 15.8, RD);
+      // hidrojen tüpleri (iki yanda), vana ve "H2" bandı
+      for (const y of [-2.4, 18.4]) {
+        for (let x = 16; x < 34; x += .6) for (let a = 0; a < Math.PI * 2; a += .35) { const yy = y + Math.cos(a) * 1.8, zz = 13 + Math.sin(a) * 1.8;
+          put(x, yy, zz, (x > 23 && x < 26) ? 0xf4f6f8 : (x > 23.6 && x < 25.4 && Math.abs(zz - 13) < .9) ? 0x1f4f8a : 0x3a8ad8); }
+        box(34, 35.4, y - .6, y + .6, 12.4, 13.6, 0x9aa0a6); box(35.4, 36.2, y - .9, y + .9, 12.8, 14.6, 0xd8302a);
+        box(18, 19, (y < 0 ? y + 1.6 : y - 2.2), (y < 0 ? y + 2.4 : y - 1.4), 11, 15, 0x2a2c30); box(30, 31, (y < 0 ? y + 1.6 : y - 2.2), (y < 0 ? y + 2.4 : y - 1.4), 11, 15, 0x2a2c30);   // kelepçeler
+      }
+    }
+  },
+  /* SAFA'NIN PASSATI: beyaz sedan. Uzun kaput, eğimli ön cam, kupa çatı, kısa bagaj; füme camlar, krom yatay ızgara,
+     siyah alt tampon, ince LED farlar, gümüş çok kollu büyük jantlar. */
+  passat: {
+    W: 19, H: 14.5, clear: 2,
+    hw: u => kp([[0, .9], [.04, .97], [.15, 1], [.85, 1], [.95, .94], [1, .84]], u),
+    belt: u => kp([[0, 8.6], [.06, 9.2], [.25, 9.4], [.68, 9.2], [.84, 8.4], [.95, 7.6], [1, 6.4]], u),
+    top: u => kp([[0, 8.6], [.06, 9.4], [.15, 10.2], [.24, 12.4], [.34, 13.6], [.52, 13.6], [.62, 12.6], [.72, 10], [.8, 9.2], [.95, 7.8], [1, 6.4]], u),
+    cw: .8, nLow: 3.4, nUp: 2.2,
+    paint(u, v, z, c) {
+      const av = Math.abs(v), WH = 0xf0f1ef;
+      if (c.upper || (z > c.belt + .5 && u > .14 && u < .74)) return (c.isTop && av < .5 && u > .3 && u < .56 && z > c.top - 1.4) ? WH : (c.side && Math.abs(u - .45) < .01) ? 0xd8dad8 : 0x15191e;  // füme camlar, beyaz tavan, B direği
+      if (u > .965 && z >= 4.8 && z <= 6.6) {
+        if (av < .42) return ((Math.round(z * 2.4) % 2) ? 0xd9dde0 : 0x22252a);                                       // krom yatay ızgara
+        if (av < .84) return z > 5.9 ? 0xeaf6ff : 0x2a2d32;                                                             // LED far
+      }
+      if (u > .96 && z < 4.6) return av < .8 ? 0x16181c : WH;                                                          // siyah alt tampon
+      if (u < .03 && z > 7.2 && z < 8.6 && av > .4 && av < .9) return 0xb8202a;                                       // stop
+      if (!c.isTop && c.side && Math.abs(z - 4.2) < .45 && u > .2 && u < .8) return 0xc9cdd0;                          // krom eşik
+      if (!c.isTop && c.side && Math.abs(u - .5) < .006 && z > 4 && z < 9) return 0xc4c7c5;                           // kapı çizgisi
+      if (!c.isTop && c.side && (Math.abs(u - .44) < .012 || Math.abs(u - .64) < .012) && Math.abs(z - 8.2) < .35) return 0xc9cdd0;   // kapı kolları
+      return z < 3 ? 0xd2d4d2 : WH;
+    },
+    wheels: [{ u: .2, r: 3.6, hub: 0xd7dce0, spokes: 10 }, { u: .78, r: 3.6, hub: 0xd7dce0, spokes: 10 }],
+    extras(put) { for (const y of [-1.2, 20.2]) for (let x = 0; x < 1.8; x += .6) for (let z = 0; z < 1.4; z += .6) put(.66 * 48 + x, y, 9.6 + z, 0x15181b); }
   }
 };
 function digit3(u, z, v) {   // kuyruktaki büyük "3"

@@ -79,6 +79,11 @@ const CARS = [
   // eğlence aracı: yavaş ama durdurulamaz (engelleri ezer, yağdan etkilenmez, pist kenarında yavaşlamaz)
   // normal hızı çok düşük; H2 turbosuyla ancak diğerlerinin normal hızına çıkar
   { key: 'patpat', name: "HASAN FURKAN'IN PATPATI", short: 'PATPAT', trait: 'Durdurulamaz', col: '#ffd23f', tank: true, offroad: true, topAbs: 205, accAbs: 150, tb: [1.45, 1.6], s: { top: 0, acc: .3, turn: .72, grip: .85 } },
+  // hızlı ama yol tutuşu çok düşük: virajda kayar, kontrolü zor
+  { key: 'h100', name: "KADİR'İN H100'Ü", short: 'H100', trait: 'Hızlı ama kaygan', col: '#eef0ee', gripAbs: 2.2, turnAbs: 2.5, s: { top: 1.05, acc: .78, turn: .5, grip: 0 } },
+  // çok yavaş; hidrojen tüpleri turboyu kendiliğinden doldurur
+  { key: 'cart', name: 'ATÖLYENİN ALIŞVERİŞ ARABASI', short: 'MARKET', trait: 'Hidrojen tüplü', col: '#d8302a', topAbs: 175, accAbs: 140, regen: 9, eager: true, tb: [1.6, 2], gas: true, s: { top: 0, acc: .3, turn: .95, grip: .9 } },
+  { key: 'passat', name: "SAFA'NIN PASSATI", short: 'PASSAT', trait: 'Konforlu sedan', col: '#f4f4f0', flip: true, s: { top: .85, acc: .68, turn: .72, grip: .78 } },
   { key: 'halis', name: "HALİS'İN SCOOTERI", short: 'HALİS', trait: 'Turbo canavarı', col: '#2f4fd8', tb: [1.9, 2.5], pick: 25, eager: true, s: { top: .4, acc: .62, turn: .95, grip: .85 } }
 ];
 const cname = d => d.short || d.name;
@@ -925,7 +930,7 @@ const TB_DEF = [1.35, 1.8], SPIN_T = 1.1;
 const statsOf = s => ({ top: 230 + 90 * s.top, acc: 110 + 130 * s.acc, turn: 2.1 + 1.3 * s.turn, grip: 4.5 + 7 * s.grip });
 function makeCar(def, slot, kind) {
   const gp = gridPos(slot);
-  const stats = statsOf(def.s); if (def.topAbs) stats.top = def.topAbs; if (def.accAbs) stats.acc = def.accAbs;
+  const stats = statsOf(def.s); if (def.topAbs) stats.top = def.topAbs; if (def.accAbs) stats.acc = def.accAbs; if (def.gripAbs) stats.grip = def.gripAbs; if (def.turnAbs) stats.turn = def.turnAbs;
   return { def, kind, stats, x: gp.x, y: gp.y, a: gp.a, vx: 0, vy: 0, av: 0, idx: gp.i, lap: -1, maxLap: -1, lapStart: 0, laps: [], bestLap: 0,
     finished: false, fin: 0, total: 0, turbo: 25, turboOn: false, lane: (Math.random() - 0.5) * 0.4, laneT: 1 + Math.random() * 2, surf: 'road', slip: 0,
     skill: 0.96 + Math.random() * 0.05, hitT: 0, buf: [], vf: 0, f: gp.i / NS, name: def.name, id: 0, seen: 0,
@@ -1263,6 +1268,7 @@ function update(dt) {
     if (c.spinT > 0) inp = { steer: 0, thr: 0, turbo: false };
     c.turboOn = c.boostT > 0 || (!!inp.turbo && c.turbo > 0 && speedF(c) > 20);
     if (c.turboOn && c.boostT <= 0) { c.turbo = Math.max(0, c.turbo - 30 * dt); }
+    else if (c.def.regen && state === 'race') c.turbo = Math.min(100, c.turbo + c.def.regen * dt);   // tüpler turboyu doldurur
     if (c === me && c.turboOn && !me.wasTurbo) sfx('turbo');
     if (c === me) me.wasTurbo = c.turboOn;
     if (racing && c.item && (c.kind === 'ai' || BOT)) { c.itemT -= dt; if (c.itemT <= 0 && state === 'race') useItem(c); }
@@ -1281,6 +1287,9 @@ function update(dt) {
   for (const c of cars) {
     const tb = c.kind === 'remote' ? !!(c.flags & 1) : c.turboOn;
     if (tb && Math.random() < 0.5) particles.push({ x: c.x - Math.cos(c.a) * 9, y: c.y - Math.sin(c.a) * 9, life: 0.3, max: 0.3, col: '#ffb03b' });
+    if (c.def.gas && Math.random() < (tb ? 0.9 : 0.35)) for (const sd of [-1, 1]) {     // hidrojen tüplerinden gaz
+      const fx = Math.cos(c.a), fy = Math.sin(c.a), x = c.x - fx * 3 + -fy * sd * 9, y = c.y - fy * 3 + fx * sd * 9;
+      particles.push({ x: x + (Math.random() - .5) * 3, y: y + (Math.random() - .5) * 3, life: 0.5, max: 0.5, col: Math.random() < .6 ? '#e6f4ff' : '#9fd0f0' }); }
     const zp = c.kind === 'remote' ? !!(c.flags & 8) : c.zapT > 0;
     if (zp && Math.random() < 0.5) particles.push({ x: c.x + (Math.random() - .5) * 8, y: c.y + (Math.random() - .5) * 8, life: 0.25, max: 0.25, col: '#ffd84a' });
   }
@@ -2076,14 +2085,15 @@ function readInput() {
   const kT = (keys.arrowup || keys.w ? 1 : 0) - (keys.arrowdown || keys.s ? 1 : 0);
   const tS = (coarse && ctlMode === 'tilt' && tilt.on) ? tilt.steer : 0;
   const kTurbo = !!(keys[' '] || keys.shift);
+  const flip = me && me.def.flip ? -1 : 1;
   if (turboLatch) {   // tek basışla aç/kapat (keydown'da çevrilir): bazı klavyeler ↑+←+Space'i aynı anda okuyamıyor
     if (latched && (keys.arrowdown || keys.s || (me && me.turbo <= 0 && me.boostT <= 0) || state !== 'race')) latched = false;
   } else latched = false;
   const turbo = !!((turboLatch ? latched : kTurbo) || (joy.ok && joy.b));
-  let thr = clamp1(kT + (joy.ok ? joy.y : 0));
-  if (coarse && autoGas && !keys.arrowdown) thr = Math.max(thr, 1);     // otomatik gaz
+  let thr = clamp1(kT + (joy.ok ? joy.y : 0)) * flip;
+  if (coarse && autoGas && !keys.arrowdown) thr = flip > 0 ? Math.max(thr, 1) : Math.min(thr, -1);     // otomatik gaz
   if (turbo && thr > -0.3) thr = 1;                                     // H2 basılıyken gaz da basılı sayılır
-  lastInput = { steer: clamp1(kS + tS + (joy.ok ? joy.x : 0)), thr, turbo };
+  lastInput = { steer: clamp1(kS + tS + (joy.ok ? joy.x : 0)) * flip, thr, turbo };
   return lastInput;
 }
 let navLatch = false;
@@ -2393,7 +2403,7 @@ window.__hgp = { get state() { return state; }, get room() { return room; }, get
       for (const k of ['boostT', 'shieldT', 'spinT', 'zapT']) if (c[k] > 0) c[k] = Math.max(0, c[k] - dt);
       if (c.def.myst) { c.mT -= dt; if (c.mT <= 0) rollMyst(c); c.mm += (c.mmT - c.mm) * Math.min(1, dt * 2.5); }
       c.turboOn = c.boostT > 0 || (!!inp.turbo && c.turbo > 0 && speedF(c) > 20);
-      if (c.turboOn && c.boostT <= 0) c.turbo = Math.max(0, c.turbo - 30 * dt);
+      if (c.turboOn && c.boostT <= 0) c.turbo = Math.max(0, c.turbo - 30 * dt); else if (c.def.regen) c.turbo = Math.min(100, c.turbo + c.def.regen * dt);
       stepCar(c, inp, dt); trackUpdate(c, true); interact(c, raceT * 1000); collide([c]);
     }
     const out = c.laps.map(x => +x.toFixed(2)); Object.assign({}, keep); state = keep.state; race = keep.race; raceT = keep.raceT; cars = keep.cars; me = keep.me;
