@@ -15,7 +15,7 @@ const UPSTASH_TOKEN = (process.env.UPSTASH_REDIS_REST_TOKEN || "").trim().replac
 const LB_KEY = "hidroket-gp-leaderboard";
 
 /* İki online mod:
-   - rekabetçi (comp): kurallar sabit, pist rastgele, araç seçimi yarıştan önce 15 sn, en az 3 oyuncu, ayrı skor tablosu
+   - rekabetçi (comp): kurallar sabit, pist rastgele, araç seçimi yarıştan önce 15 sn, oyuncu sınırı yok (tek kişi de olur), ayrı skor tablosu
    - serbest (free): oda sahibi her şeyi ayarlar (pist, tur, eşyalar, hangi araçlar/güçler seçilebilir) */
 const COMP_TRACKS = ["istanbul", "monaco", "spa", "monza", "baku", "silverstone", "podyum"];
 const TRACKS = [...COMP_TRACKS, "tandogan", "golbasi"];          // serbest modda hepsi
@@ -25,7 +25,7 @@ const CARS = [...COMP_CARS, "hk1", "halis", "patpat", "h100", "cart", "passat"];
 const ITEMS = ["turbo", "super", "oil", "shield", "zap"];
 const CFG_DEF = { track: "istanbul", laps: 3, items: 1, obst: 1, catchup: 1, collide: 1, cars: CARS, itemSet: ITEMS };
 const COMP_CFG = { laps: 5, items: 1, obst: 1, catchup: 0, collide: 1, cars: COMP_CARS, itemSet: ITEMS };
-const COMP_MIN = 3, PICK_MS = 15000;
+const COMP_MIN = 1, PICK_MS = 15000;
 function cleanCfg(c) {
   c = c || {}; const n = (v, lo, hi, d) => Number.isInteger(v) && v >= lo && v <= hi ? v : d;
   const sub = (a, all, d) => Array.isArray(a) ? all.filter(x => a.includes(x)) : d;
@@ -243,7 +243,7 @@ function makeRoom(kind) {
 }
 const allowedCars = room => room.kind === "comp" ? COMP_CARS : room.cfg.cars;
 function fixCar(p, room) { const a = allowedCars(room); if (!a.includes(p.car)) p.car = a[0]; }
-// rekabetçi: herkes hazırsa ve en az 3 kişi varsa araç seçimine geç
+// rekabetçi: herkes hazırsa ve en az 1 kişi varsa araç seçimine geç
 function checkCompStart(room) {
   if (room.kind !== "comp" || room.phase !== "lobby") return;
   const ps = [...room.players.values()];

@@ -82,7 +82,7 @@ const CARS = [
   // hızlı ama yol tutuşu çok düşük: virajda kayar, kontrolü zor
   { key: 'h100', name: "KADİR'İN H100'Ü", short: 'H100', trait: 'Hızlı ama kaygan', col: '#eef0ee', gripAbs: 2.2, turnAbs: 2.5, s: { top: 1.05, acc: .78, turn: .5, grip: 0 } },
   // çok yavaş; hidrojen tüpleri turboyu kendiliğinden doldurur
-  { key: 'cart', name: 'ATÖLYENİN ALIŞVERİŞ ARABASI', short: 'MARKET', trait: 'Hidrojen tüplü', col: '#d8302a', topAbs: 175, accAbs: 140, regen: 9, eager: true, tb: [1.6, 2], gas: true, s: { top: 0, acc: .3, turn: .95, grip: .9 } },
+  { key: 'cart', name: 'ATÖLYENİN ALIŞVERİŞ ARABASI', short: 'MARKET', trait: 'Hidrojen tüplü', col: '#d8302a', topAbs: 175, accAbs: 140, regen: 9, pull: .3, eager: true, tb: [1.6, 2], gas: true, s: { top: 0, acc: .3, turn: .95, grip: .9 } },
   { key: 'passat', name: "SAFA'NIN PASSATI", short: 'PASSAT', trait: 'Konforlu sedan', col: '#f4f4f0', flip: true, s: { top: .85, acc: .68, turn: .72, grip: .78 } },
   { key: 'halis', name: "HALİS'İN SCOOTERI", short: 'HALİS', trait: 'Turbo canavarı', col: '#2f4fd8', tb: [1.9, 2.5], pick: 25, eager: true, s: { top: .4, acc: .62, turn: .95, grip: .85 } }
 ];
@@ -956,6 +956,7 @@ function stepCar(c, inp, dt) {
   const steerEff = Math.min(1, spd / 45) * (1 - 0.32 * Math.min(1, spd / st.top));
   // turboda hız %35 artıyor; direksiyon da güçlenmezse dönüş yarıçapı açılıp araç viraja giremiyordu
   c.av = inp.steer * st.turn * steerEff * (c.turboOn ? 1.3 : 1) * (vf < -2 ? -1 : 1);
+  if (c.def.pull) c.av += c.def.pull * st.turn * steerEff * (vf < -2 ? -1 : 1);   // market arabası: rot balans bozuk, hep sağa çeker
   if (c.spinT > 0 && c.spinA0 != null) {          // yağ lekesi: tam 360° dönüp eski yönünde biter
     const pr = 1 - c.spinT / SPIN_T, e = pr * pr * (3 - 2 * pr), na = wrapA(c.spinA0 + c.spinDir * TAU * e);
     c.av = wrapA(na - c.a) / dt; c.a = na;
@@ -1753,7 +1754,7 @@ function renderRoom() {
     if (mine && mine.car !== selCar && CARK[mine.car]) { selCar = mine.car; syncPickers(); }
   }
   $('cfgHint').textContent = isHost ? '(sen ayarlıyorsun)' : '(oda sahibi ayarlar)';
-  const nReady = room.players.filter(p => p.ready).length, need = room.min || 3;
+  const nReady = room.players.filter(p => p.ready).length, need = room.min || 1;
   $('roomNote').textContent = live ? (room.phase === 'results' ? 'Sonuçlar gösteriliyor, birazdan lobiye dönülecek.' : room.phase === 'pick' ? 'Araçlar seçiliyor…' : 'Yarış sürüyor, canlı izliyorsun. Bir sonraki yarışa katılacaksın.')
     : comp ? (room.players.length < need ? 'En az ' + need + ' pilot gerekiyor (' + room.players.length + '/' + need + '). Arkadaşlarını kodla çağır.' : 'Hazır: ' + nReady + '/' + room.players.length + '. Herkes hazır olunca başlar.')
     : isHost ? (room.players.length < 2 ? 'Tek başına da başlatabilirsin; arkadaşların sonraki yarışa katılır.' : 'Herkes hazırsa başlat.') : 'Oda sahibinin (' + (host ? host.name : '…') + ') başlatması bekleniyor.';
@@ -1863,7 +1864,7 @@ function renderProfile() {
 // giriş: üç mod
 let onlineKind = 'comp';
 const MODE_TXT = {
-  comp: ['REKABETÇİ', 'Kurallar herkes için aynı: 5 tur, engeller az, eşyalar normal, çarpışma açık, yakalama bonusu kapalı. Pist rastgele gelir, araçlar sadece Tur-AZ, Pars, Ucube ve Helianthus. En az 3 pilot gerekir; dereceler rekabetçi skor tablosuna yazılır.'],
+  comp: ['REKABETÇİ', 'Kurallar herkes için aynı: 5 tur, engeller az, eşyalar normal, çarpışma açık, yakalama bonusu kapalı. Pist rastgele gelir, araçlar sadece Tur-AZ, Pars, Ucube ve Helianthus. Tek başına da girebilirsin; dereceler rekabetçi skor tablosuna yazılır.'],
   free: ['SERBEST', 'Oda sahibi her şeyi seçer: pist (kampüs pistleri dahil), tur sayısı, engeller, hangi araçların ve hangi güçlerin olacağı. Hidroket-1, Halis\'in scooterı ve Hasan Furkan\'ın patpatı sadece burada. Dereceler serbest skor tablosuna yazılır.']
 };
 function openOnline(kind) {
