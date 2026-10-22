@@ -2072,14 +2072,16 @@ function syncTouch() {
   const act = new Set(touchPtrs.values());
   for (const b of touchBtns) { const k = b.dataset.k, on = act.has(k); b.classList.toggle('on', on); keys[k] = on; }
 }
+$('touch').addEventListener('contextmenu', e => e.preventDefault());
 $('touch').addEventListener('pointerdown', e => {
+  if (tEditing) return;
   const k = keyAt(e.clientX, e.clientY); if (!k) return;
   e.preventDefault(); initAudio(); touchPtrs.set(e.pointerId, k); syncTouch();
 });
 addEventListener('pointermove', e => { if (!touchPtrs.has(e.pointerId)) return; const k = keyAt(e.clientX, e.clientY); if (k !== touchPtrs.get(e.pointerId)) { touchPtrs.set(e.pointerId, k); syncTouch(); } }, { passive: true });
 const touchEnd = e => { if (touchPtrs.delete(e.pointerId)) syncTouch(); };
 addEventListener('pointerup', touchEnd); addEventListener('pointercancel', touchEnd);
-$('tItem').addEventListener('pointerdown', e => { e.preventDefault(); if (me) useItem(me); });
+$('tItem').addEventListener('pointerdown', e => { if (tEditing) return; e.preventDefault(); if (me) useItem(me); });
 const clamp1 = v => clamp(v, -1, 1);
 function readInput() {
   const kS = (keys.arrowright || keys.d ? 1 : 0) - (keys.arrowleft || keys.a ? 1 : 0);
@@ -2206,7 +2208,10 @@ if (MUS) {
   $('mvol').value = Math.round(mvol * 100);
   $('mvol').oninput = () => { mvol = $('mvol').value / 100; store.set('hgp-mvol', mvol); if (!muted) MUS.setVolume(mvol); };
 }
+const VIB = { crash: 70, bump: 25, zap: 90, box: 20, pick: 15 };
+function vib(type) { try { if (coarse && vibOn.checked && VIB[type] && navigator.vibrate) navigator.vibrate(VIB[type]); } catch (e) { } }
 function sfx(type) {
+  vib(type);
   if (!ac || muted) return;
   const t = ac.currentTime;
   if (type === 'turbo' || type === 'crash' || type === 'bump' || type === 'zap') {
@@ -2306,14 +2311,21 @@ for (const d of Object.values(drawers)) {
 // telefon: tuşlar ya da eğerek sürüş
 let ctlMode = store.get('hgp-ctl', 'buttons');
 const tilt = { on: false, ang: 0, a0: null, steer: 0 };
-const tiltInv = $('tiltInv'); tiltInv.checked = store.get('hgp-tiltinv', false);
-tiltInv.onchange = () => store.set('hgp-tiltinv', tiltInv.checked);
+// eski sürümde yön tersti (telefonu sağa çevirince araba sola dönüyordu); düzeltildi, eski "ters" işaretini de sıfırlamak için yeni anahtar
+const tiltInv = $('tiltInv'); tiltInv.checked = store.get('hgp-tiltinv2', false);
+tiltInv.onchange = () => store.set('hgp-tiltinv2', tiltInv.checked);
+const tiltSens = $('tiltSens'); tiltSens.value = store.get('hgp-tiltsens', 5);
+const sensTxt = () => { $('tiltSensV').textContent = tiltSens.value; };
+tiltSens.oninput = () => { store.set('hgp-tiltsens', +tiltSens.value); sensTxt(); }; sensTxt();
+const vibOn = $('vibOn'); vibOn.checked = store.get('hgp-vib', true); vibOn.onchange = () => store.set('hgp-vib', vibOn.checked);
 function onMotion(e) {
   const g = e.accelerationIncludingGravity; if (!g || g.x == null) return;
   const ang = Math.atan2(g.x, g.y);
   tilt.ang = ang; if (tilt.a0 === null) tilt.a0 = ang;
-  let d = wrapA(ang - tilt.a0); if (Math.abs(d) < 0.05) d = 0;
-  tilt.steer = clamp(d / 0.42, -1, 1) * (tiltInv.checked ? -1 : 1);
+  let d = -wrapA(ang - tilt.a0); if (Math.abs(d) < 0.04) d = 0;      // saat yönünde çevirmek = sağa
+  const full = 0.62 - tiltSens.value * 0.05;                          // hassasiyet 1: 33° tam dönüş, 10: 7°
+  const want = clamp(d / full, -1, 1) * (tiltInv.checked ? -1 : 1);
+  tilt.steer += (want - tilt.steer) * 0.5;                            // titremeyi azaltan hafif yumuşatma
 }
 async function enableTilt() {
   if (tilt.on) return true;
@@ -2336,15 +2348,97 @@ async function setCtl(m) {
 }
 $('ctlBtns').onclick = () => setCtl('buttons');
 $('ctlTilt').onclick = () => setCtl('tilt');
-$('tCal').addEventListener('pointerdown', e => { e.preventDefault(); tiltCal(); });
+$('tCal').addEventListener('pointerdown', e => { if (tEditing) return; e.preventDefault(); tiltCal(); });
 ctlUI(ctlMode);
+
+/* ---------- tuş düzeni: yer ve boyut ayarı ----------
+   Düzen, #touch alanına göre oran olarak saklanır (x,y: tuş merkezi 0..1, k: boyut çarpanı), böylece her ekranda aynı yerde durur. */
+const TBTN = ['tLeft', 'tRight', 'tCal', 'tItem', 'tH2', 'tBrake', 'tGas'];
+let tLayout = store.get('hgp-tlayout', null), tEditing = false, tSel = null;
+const touchEl = $('touch');
+function applyLayout() {
+  touchEl.classList.toggle('free', !!tLayout);
+  for (const id of TBTN) {
+    const b = $(id), L = tLayout && tLayout[id];
+    if (L) { b.style.left = (L.x * 100) + '%'; b.style.top = (L.y * 100) + '%'; b.style.setProperty('--k', L.k); }
+    else { b.style.left = b.style.top = ''; b.style.removeProperty('--k'); }
+  }
+}
+function captureLayout() {      // varsayılan dizilişten başlangıç düzenini çıkar (gizli tuşları geçici açarak)
+  const tt = $('tTilt'), ts = $('tSteer'), ti = $('tItem'), h = [tt.hidden, ts.hidden, ti.hidden];
+  tt.hidden = ts.hidden = ti.hidden = false; touchEl.classList.remove('free');
+  const R = touchEl.getBoundingClientRect(), full = touchEl.parentElement.getBoundingClientRect(), out = {};
+  for (const id of TBTN) {
+    const r = $(id).getBoundingClientRect();
+    out[id] = { x: clamp((r.left + r.width / 2 - full.left) / full.width, .03, .97), y: clamp((r.top + r.height / 2 - full.top) / full.height, .05, .95), k: 1 };
+  }
+  // ORTA tuşu, eğmede sol tuşların yerinde dursun
+  out.tCal = { x: out.tLeft.x, y: out.tLeft.y, k: 1 };
+  [tt.hidden, ts.hidden, ti.hidden] = h; void R; return out;
+}
+const saveLayout = () => store.set('hgp-tlayout', tLayout);
+function selBtn(id) {
+  tSel = id; for (const x of TBTN) $(x).classList.toggle('sel', x === id);
+  const k = id && tLayout[id] ? tLayout[id].k : 1; $('tSize').value = Math.round(k * 100); $('tSizeV').textContent = '%' + Math.round(k * 100);
+  $('tSize').disabled = !id;
+  $('tEditMsg').textContent = id ? 'Seçili: ' + $(id).getAttribute('aria-label') + '. Sürükleyerek taşı, çubukla boyutunu ayarla.' : 'Tuşu sürükleyip taşı. Boyutunu değiştirmek için önce tuşa dokun.';
+}
+function startTEdit() {
+  closeDrawers(); touchEl.hidden = false; if (!tLayout) { tLayout = captureLayout(); }
+  tEditing = true; touchEl.classList.add('editing'); $('tEdit').hidden = false; document.body.classList.add('tediting');
+  for (const k in keys) keys[k] = false; touchPtrs.clear(); syncTouch();
+  $('tTilt').hidden = ctlMode !== 'tilt'; $('tSteer').hidden = ctlMode === 'tilt';
+  applyLayout(); selBtn(null);
+}
+function endTEdit() {
+  tEditing = false; touchEl.classList.remove('editing'); $('tEdit').hidden = true; document.body.classList.remove('tediting');
+  selBtn(null); saveLayout(); openDrawer('set');
+}
+let tDrag = null;
+touchEl.addEventListener('pointerdown', e => {
+  if (!tEditing) return;
+  const b = e.target.closest && e.target.closest('#touch button'); if (!b || !TBTN.includes(b.id)) { selBtn(null); return; }
+  e.preventDefault(); selBtn(b.id);
+  const R = touchEl.getBoundingClientRect(), L = tLayout[b.id];
+  tDrag = { id: b.id, pid: e.pointerId, dx: L.x - (e.clientX - R.left) / R.width, dy: L.y - (e.clientY - R.top) / R.height };
+  try { b.setPointerCapture(e.pointerId); } catch (er) { }
+});
+addEventListener('pointermove', e => {
+  if (!tDrag || e.pointerId !== tDrag.pid) return;
+  const R = touchEl.getBoundingClientRect(), L = tLayout[tDrag.id];
+  L.x = clamp((e.clientX - R.left) / R.width + tDrag.dx, .02, .98); L.y = clamp((e.clientY - R.top) / R.height + tDrag.dy, .03, .97); applyLayout();
+});
+const tDragEnd = e => { if (tDrag && e.pointerId === tDrag.pid) { tDrag = null; saveLayout(); } };
+addEventListener('pointerup', tDragEnd); addEventListener('pointercancel', tDragEnd);
+$('tSize').oninput = () => { if (!tSel) return; const k = +$('tSize').value / 100; tLayout[tSel].k = k; $('tSizeV').textContent = '%' + Math.round(k * 100); applyLayout(); saveLayout(); };
+const scaleAll = f => { for (const id of TBTN) tLayout[id].k = clamp(Math.round(tLayout[id].k * f * 20) / 20, .5, 2); applyLayout(); saveLayout(); selBtn(tSel); };
+$('tAllMinus').onclick = () => scaleAll(0.9); $('tAllPlus').onclick = () => scaleAll(1.1);
+$('tReset').onclick = () => { tLayout = null; touchEl.hidden = false; applyLayout(); tLayout = captureLayout(); applyLayout(); saveLayout(); selBtn(null); };
+$('tDone').onclick = endTEdit;
+$('btnTEdit').onclick = startTEdit;
+const tOpac = $('tOpac'); tOpac.value = store.get('hgp-topac', 100);
+const applyOpac = () => touchEl.style.setProperty('--op', tOpac.value / 100);
+tOpac.oninput = () => { store.set('hgp-topac', +tOpac.value); applyOpac(); }; applyOpac();
+applyLayout();
+// yarışta ekran kararmasın
+let wakeLock = null, wakeBusy = false;
+const wantWake = () => coarse && raceUI() && !document.hidden;
+async function syncWake() {
+  if (wakeBusy || !('wakeLock' in navigator)) return; wakeBusy = true;
+  try {
+    if (wantWake() && !wakeLock) { wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => { wakeLock = null; }); }
+    else if (!wantWake() && wakeLock) { const w = wakeLock; wakeLock = null; await w.release(); }
+  } catch (e) { wakeLock = null; if (wantWake()) wakeBusy = 'fail'; }
+  if (wakeBusy !== 'fail') wakeBusy = false; else setTimeout(() => { wakeBusy = false; }, 5000);
+}
 
 // her karede arayüz görünürlüğü
 const raceUI = () => state === 'race' || state === 'count' || state === 'finish' || state === 'paused';
 function uiTick() {
   const portrait = innerHeight > innerWidth;
-  $('touch').hidden = !(coarse && raceUI());
-  $('tItem').hidden = !race.items;
+  $('touch').hidden = !((coarse && raceUI()) || tEditing);
+  $('tItem').hidden = !race.items && !tEditing;
+  if (wantWake() !== !!wakeLock) syncWake();
   $('rotate').hidden = !(coarse && portrait && raceUI());
   $('tools').hidden = !(state === 'menu' || state === 'room' || state === 'pick' || state === 'boot' || state === 'results' || state === 'paused');
   if (state === 'pick') $('pickTime').textContent = Math.max(0, Math.ceil((pickEnd - performance.now()) / 1000));
@@ -2390,7 +2484,7 @@ async function init() {
   state = 'menu'; showScreen('entry');
   connect();
 }
-window.__hgp = { get state() { return state; }, get room() { return room; }, get me() { return me; }, get cars() { return cars; }, get board() { return board; },
+window.__hgp = { get state() { return state; }, get room() { return room; }, get me() { return me; }, get lastInput() { return lastInput; }, get tilt() { return tilt; }, get cars() { return cars; }, get board() { return board; },
   get myId() { return myId; }, get race() { return race; }, get NS() { return NS; }, get tex() { return tc; }, send, chooseCar, useTrack, useItem, startPractice,
   setPcfg(c) { pcfg = Object.assign({}, pcfg, c); },
   // denge testi: tek aracı yapay zekâ sürüşüyle hızlandırılmış simüle et, tur sürelerini döndür

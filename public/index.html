@@ -96,6 +96,18 @@ input#code{text-transform:uppercase;letter-spacing:.3em;width:8.5em;flex:none}
 .touch button.on{background:rgba(43,155,224,.75)}
 #tSteer button{font-size:clamp(16px,6vmin,32px)}
 .touch .col{display:flex;flex-direction:column;gap:clamp(6px,2vmin,14px);align-items:center}
+.touch button{pointer-events:auto;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;opacity:var(--op,1)}
+.touch.free{inset:0;padding:0}
+.touch.free .grp:not([hidden]),.touch.free .col{display:contents}
+.touch.free button{position:absolute;transform:translate(-50%,-50%);width:calc(var(--s) * var(--k,1));height:calc(var(--s) * var(--k,1))}
+.touch.editing{z-index:6;background:rgba(0,0,0,.25)}
+.touch.editing button{opacity:1;border-style:dashed;cursor:grab}
+.touch.editing button.sel{border-color:#ffd23f;border-style:solid;box-shadow:0 0 0 3px rgba(255,210,63,.4)}
+.tedit{position:absolute;left:50%;top:8px;transform:translateX(-50%);z-index:7;background:rgba(7,20,37,.94);border:2px solid var(--line);padding:8px 10px;display:flex;flex-direction:column;gap:6px;
+  width:min(560px,calc(100% - 16px));font-size:12px}
+.tedit p{margin:0;color:var(--dim)} .tedit .row{display:flex;gap:6px;align-items:center;flex-wrap:wrap} .tedit input[type=range]{flex:1;min-width:90px}
+.tedit .btn.sm{padding:8px 9px;font-size:8px}
+body.tediting #overlay,body.tediting #tools{visibility:hidden}
 
 .rotate{position:fixed;inset:0;z-index:30;background:#0a1f33;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;text-align:center;padding:24px}
 .rotate svg{width:88px;height:88px;fill:none;stroke:var(--gold);stroke-width:3}
@@ -235,12 +247,26 @@ pre{margin:0;background:#061526;border:1px solid var(--line);padding:14px;overfl
     </div>
 
     <div class="touch" id="touch" hidden>
-      <div class="grp" id="tSteer"><button data-k="arrowleft" aria-label="Sola">◀</button><button data-k="arrowright" aria-label="Sağa">▶</button></div>
+      <div class="grp" id="tSteer"><button id="tLeft" data-k="arrowleft" aria-label="Sola">◀</button><button id="tRight" data-k="arrowright" aria-label="Sağa">▶</button></div>
       <div class="grp" id="tTilt" hidden><button class="sm" id="tCal" aria-label="Direksiyonu ortala">ORTA</button></div>
       <div class="grp"><button class="sm" id="tItem" aria-label="Eşyayı kullan">EŞYA</button></div>
       <div class="grp">
-        <div class="col"><button class="sm" data-k="shift" aria-label="Turbo">H2</button><button data-k="arrowdown" aria-label="Fren">FREN</button></div>
-        <button class="big" data-k="arrowup" aria-label="Gaz">GAZ</button>
+        <div class="col"><button class="sm" id="tH2" data-k="shift" aria-label="Turbo">H2</button><button id="tBrake" data-k="arrowdown" aria-label="Fren">FREN</button></div>
+        <button class="big" id="tGas" data-k="arrowup" aria-label="Gaz">GAZ</button>
+      </div>
+    </div>
+    <!-- tuş düzenleme çubuğu -->
+    <div class="tedit" id="tEdit" hidden>
+      <p id="tEditMsg">Tuşu sürükleyip taşı. Boyutunu değiştirmek için önce tuşa dokun.</p>
+      <div class="row">
+        <label class="chk" for="tSize">Seçili tuş boyutu</label><input type="range" id="tSize" min="50" max="200" step="5" value="100">
+        <b id="tSizeV">%100</b>
+      </div>
+      <div class="row">
+        <button class="btn ghost sm" id="tAllMinus" type="button">HEPSİ KÜÇÜK</button>
+        <button class="btn ghost sm" id="tAllPlus" type="button">HEPSİ BÜYÜK</button>
+        <button class="btn ghost sm" id="tReset" type="button">SIFIRLA</button>
+        <button class="btn go sm" id="tDone" type="button">BİTTİ</button>
       </div>
     </div>
 
@@ -434,7 +460,12 @@ pre{margin:0;background:#061526;border:1px solid var(--line);padding:14px;overfl
           <button id="ctlTilt" aria-pressed="false">EĞEREK SÜR</button>
         </div>
         <label class="chk"><input type="checkbox" id="autoGas"> Otomatik gaz (sadece FREN'e basarsın)</label>
+        <div class="row"><button class="btn" id="btnTEdit" type="button">TUŞLARI DÜZENLE</button></div>
+        <p class="note">Tuşların yerini ve boyutunu kendine göre ayarla. Yaptığın düzen bu telefonda saklanır.</p>
+        <div class="row"><label class="chk" for="tOpac">Tuş saydamlığı</label><input type="range" id="tOpac" min="20" max="100" step="5"></div>
+        <div class="row"><label class="chk" for="tiltSens">Eğme hassasiyeti</label><input type="range" id="tiltSens" min="1" max="10" step="1"><b id="tiltSensV"></b></div>
         <label class="chk"><input type="checkbox" id="tiltInv"> Eğme yönünü ters çevir</label>
+        <label class="chk"><input type="checkbox" id="vibOn"> Titreşim (çarpınca, eşya alınca)</label>
         <p class="note" id="tiltNote">Eğerek sür: telefonu direksiyon gibi sağa sola çevir. Yarış başında düz tuttuğun an "orta" kabul edilir; ORTA tuşuyla yeniden ortalayabilirsin.</p>
         <h3>GÖRÜNTÜ</h3>
         <label class="chk"><input type="checkbox" id="elevView"> Eğimli görüntü (yokuş ve tepeler görünsün)</label>
